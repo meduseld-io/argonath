@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ game_name }} | Argonath</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <h1>{{ game_name }}</h1>
+            <span class="badge" id="state-badge">offline</span>
+        </div>
+        <div class="header-right">
+            {% if auth_mode != 'none' %}
+            <span class="user-info">{{ user.username }} ({{ user.role }})</span>
+            <a href="/logout" class="btn btn-sm">Logout</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <main>
+        <!-- Status Cards -->
+        <section class="status-cards">
+            <div class="card">
+                <div class="card-label">System CPU</div>
+                <div class="card-value" id="stat-cpu">--%</div>
+            </div>
+            <div class="card">
+                <div class="card-label">CPU Temp</div>
+                <div class="card-value" id="stat-temp">--°C</div>
+            </div>
+            <div class="card">
+                <div class="card-label">System RAM</div>
+                <div class="card-value" id="stat-ram">-- / -- GB</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Disk</div>
+                <div class="card-value" id="stat-disk">-- / -- GB</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Server CPU</div>
+                <div class="card-value" id="stat-server-cpu">--</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Server RAM</div>
+                <div class="card-value" id="stat-server-ram">--</div>
+            </div>
+        </section>
+
+        <!-- Server Info -->
+        <section class="server-info">
+            <div class="info-row">
+                <span>Uptime:</span>
+                <span id="uptime">--</span>
+            </div>
+            <div class="info-row">
+                <span>Health:</span>
+                <span id="health" class="badge">--</span>
+            </div>
+            {% if steamcmd_enabled %}
+            <div class="info-row">
+                <span>Build:</span>
+                <span id="build-info">--</span>
+            </div>
+            {% endif %}
+        </section>
+
+        <!-- Control Buttons -->
+        <section class="controls">
+            <button class="btn btn-start" id="btn-start" onclick="serverAction('start')">Start</button>
+            <button class="btn btn-stop" id="btn-stop" onclick="serverAction('stop')">Stop</button>
+            <button class="btn btn-restart" id="btn-restart" onclick="serverAction('restart')">Restart</button>
+            <button class="btn btn-kill" id="btn-kill" onclick="serverAction('kill')">Kill</button>
+        </section>
+
+        <!-- Charts -->
+        <section class="charts">
+            <div class="chart-container">
+                <h3>CPU Usage</h3>
+                <canvas id="chart-cpu"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>RAM Usage</h3>
+                <canvas id="chart-ram"></canvas>
+            </div>
+        </section>
+
+        <!-- Game Server Logs -->
+        <section class="logs-section">
+            <h3>Server Logs</h3>
+            <div class="log-viewer" id="log-viewer">
+                <pre id="log-content">Loading...</pre>
+            </div>
+        </section>
+
+        <!-- Startup Logs -->
+        <section class="logs-section">
+            <h3>Startup Logs</h3>
+            <div class="log-viewer" id="startup-log-viewer">
+                <pre id="startup-log-content">Loading...</pre>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script>
+        const GAME_NAME = '{{ game_name }}';
+        const MAX_PLAYERS = {{ max_players }};
+        let statsInterval, logsInterval, historyInterval;
+        let cpuChart, ramChart;
+        let lastState = '';
+
+        // ================= CHARTS =================
+
+        function initCharts() {
+            const chartOpts = {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                scales: {
+                    x: { display: false },
+                    y: { beginAtZero: true, ticks: { color: '#aaa' }, grid: { color: '#333' } }
+                },
+                plugins: { legend: { labels: { color: '#ccc' } } }
+            };
+
+            cpuChart = new Chart(document.getElementById('chart-cpu'), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'System', data: [], borderColor: '#d4a843', borderWidth: 2, fill: false, pointRadius: 0 },
+                        { label: 'Server', data: [], borderColor: '#4caf50', borderWidth: 2, fill: false, pointRadius: 0 }
+                    ]
+                },
+                options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, max: 100 } } }
+            });
+
+            ramChart = new Chart(document.getElementById('chart-ram'), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'System', data: [], borderColor: '#d4a843', borderWidth: 2, fill: false, pointRadius: 0 },
+                        { label: 'Server', data: [], borderColor: '#4caf50', borderWidth: 2, fill: false, pointRadius: 0 }
+                    ]
+                },
+                options: chartOpts
+            });
+        }
+
+        function updateCharts(history) {
+            const labels = history.map(h => h.timestamp);
+            cpuChart.data.labels = labels;
+            cpuChart.data.datasets[0].data = history.map(h => h.system_cpu);
+            cpuChart.data.datasets[1].data = history.map(h => h.server_cpu);
+            cpuChart.update();
+
+            ramChart.data.labels = labels;
+            ramChart.data.datasets[0].data = history.map(h => h.system_ram);
+            ramChart.data.datasets[1].data = history.map(h => h.server_ram);
+            ramChart.update();
+        }
+
+        // ================= STATS POLLING =================
+
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/stats');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                // State badge
+                const badge = document.getElementById('state-badge');
+                badge.textContent = data.state;
+                badge.className = 'badge state-' + data.state;
+
+                // Dynamic tab title
+                const icons = { running: '🟢', offline: '🔴', crashed: '💥', starting: '🟡', stopping: '🟠', restarting: '🟡' };
+                document.title = `${icons[data.state] || ''} ${GAME_NAME} | Argonath`;
+
+                // System stats
+                if (data.stats) {
+                    document.getElementById('stat-cpu').textContent = data.stats.cpu.toFixed(1) + '%';
+                    document.getElementById('stat-temp').textContent = data.stats.cpu_temp !== null ? data.stats.cpu_temp + '°C' : 'N/A';
+                    document.getElementById('stat-ram').textContent = data.stats.ram_used.toFixed(1) + ' / ' + data.stats.ram_total.toFixed(1) + ' GB';
+                    document.getElementById('stat-disk').textContent = data.stats.disk_used.toFixed(0) + ' / ' + data.stats.disk_total.toFixed(0) + ' GB';
+
+                    // Color temp card
+                    const tempEl = document.getElementById('stat-temp');
+                    tempEl.classList.remove('temp-ok', 'temp-warn', 'temp-hot');
+                    if (data.stats.cpu_temp !== null) {
+                        if (data.stats.cpu_temp >= 75) tempEl.classList.add('temp-hot');
+                        else if (data.stats.cpu_temp >= 60) tempEl.classList.add('temp-warn');
+                        else tempEl.classList.add('temp-ok');
+                    }
+                }
+
+                // Server stats
+                if (data.server) {
+                    document.getElementById('stat-server-cpu').textContent = data.server.cpu_raw.toFixed(1) + '%';
+                    document.getElementById('stat-server-ram').textContent = data.server.ram.toFixed(2) + ' GB';
+                } else {
+                    document.getElementById('stat-server-cpu').textContent = '--';
+                    document.getElementById('stat-server-ram').textContent = '--';
+                }
+
+                // Uptime
+                document.getElementById('uptime').textContent = formatUptime(data.uptime || 0);
+
+                // Health
+                const healthEl = document.getElementById('health');
+                healthEl.textContent = data.health || '--';
+                healthEl.className = 'badge health-' + (data.health || 'unknown');
+
+                // Build info
+                const buildEl = document.getElementById('build-info');
+                if (buildEl && data.version) {
+                    if (data.version.update_available) {
+                        buildEl.textContent = `Update available (${data.version.current_build} → ${data.version.latest_build})`;
+                        buildEl.classList.add('update-available');
+                    } else {
+                        buildEl.textContent = data.version.current_build || 'Unknown';
+                        buildEl.classList.remove('update-available');
+                    }
+                }
+
+                // Button states
+                updateButtons(data.state);
+                lastState = data.state;
+            } catch (e) {
+                console.error('Failed to fetch stats:', e);
+            }
+        }
+
+        function updateButtons(state) {
+            const start = document.getElementById('btn-start');
+            const stop = document.getElementById('btn-stop');
+            const restart = document.getElementById('btn-restart');
+            const kill = document.getElementById('btn-kill');
+
+            start.disabled = !['offline', 'crashed'].includes(state);
+            stop.disabled = !['running'].includes(state);
+            restart.disabled = !['running'].includes(state);
+            kill.disabled = !['running', 'restarting'].includes(state);
+        }
+
+        function formatUptime(seconds) {
+            if (!seconds) return '--';
+            const d = Math.floor(seconds / 86400);
+            const h = Math.floor((seconds % 86400) / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            let parts = [];
+            if (d) parts.push(d + 'd');
+            if (h) parts.push(h + 'h');
+            if (m) parts.push(m + 'm');
+            parts.push(s + 's');
+            return parts.join(' ');
+        }
+
+        // ================= SERVER ACTIONS =================
+
+        async function serverAction(action) {
+            try {
+                const res = await fetch('/api/' + action, { method: 'POST' });
+                if (res.status === 429) {
+                    const data = await res.json();
+                    alert('Cooldown active: ' + (data.remaining || 'wait') + 's remaining');
+                } else if (!res.ok && res.status !== 204) {
+                    const data = await res.json();
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+                // Fetch stats immediately after action
+                setTimeout(fetchStats, 500);
+            } catch (e) {
+                console.error('Server action failed:', e);
+                alert('Failed to execute action');
+            }
+        }
+
+        // ================= LOGS =================
+
+        async function fetchLogs() {
+            try {
+                const res = await fetch('/api/logs');
+                if (!res.ok) return;
+                const data = await res.json();
+                const el = document.getElementById('log-content');
+                const viewer = document.getElementById('log-viewer');
+                const atBottom = viewer.scrollTop + viewer.clientHeight >= viewer.scrollHeight - 50;
+                el.textContent = data.lines.join('\n') || 'No logs available';
+                if (atBottom) viewer.scrollTop = viewer.scrollHeight;
+            } catch (e) {
+                console.error('Failed to fetch logs:', e);
+            }
+        }
+
+        async function fetchStartupLogs() {
+            try {
+                const res = await fetch('/api/startup-logs');
+                if (!res.ok) return;
+                const data = await res.json();
+                document.getElementById('startup-log-content').textContent = data.lines.join('\n') || 'No startup logs';
+            } catch (e) {
+                console.error('Failed to fetch startup logs:', e);
+            }
+        }
+
+        async function fetchHistory() {
+            try {
+                const res = await fetch('/api/history');
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.history && data.history.length) updateCharts(data.history);
+            } catch (e) {
+                console.error('Failed to fetch history:', e);
+            }
+        }
+
+        // ================= INIT =================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            fetchStats();
+            fetchLogs();
+            fetchStartupLogs();
+            fetchHistory();
+
+            statsInterval = setInterval(fetchStats, 5000);
+            logsInterval = setInterval(() => { fetchLogs(); fetchStartupLogs(); }, 5000);
+            historyInterval = setInterval(fetchHistory, 30000);
+        });
+    </script>
+</body>
+</html>

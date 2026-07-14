@@ -1,0 +1,18 @@
+services:
+  panel:
+    build: .
+    # image: ghcr.io/meduseld-io/argonath:latest
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./game:/game
+      - ./config:/config
+      - panel-data:/data
+    environment:
+      - TZ=America/New_York
+      # - SECRET_KEY=change-me-to-something-random
+      # - IDLE_SHUTDOWN_MINUTES=15
+    restart: unless-stopped
+
+volumes:
+  panel-data:

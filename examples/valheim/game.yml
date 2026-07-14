@@ -1,0 +1,25 @@
+# Valheim Dedicated Server
+game:
+  name: "Valheim"
+  steam_app_id: "896660"
+  process_name: "valheim_server.x86_64"
+  launch_script: "/game/start.sh"
+  server_dir: "/game"
+  log_file: "/game/logs/valheim.log"
+  max_players: 10
+  args: ["-name", "MyServer", "-port", "2456", "-world", "Dedicated"]
+
+server:
+  port: 5000
+  host: "0.0.0.0"
+
+auth:
+  mode: "local"
+
+steamcmd:
+  enabled: true
+  install_dir: "/game"
+  validate: true
+
+compatibility:
+  wine: false
