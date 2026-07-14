@@ -1,3 +1,5 @@
+<p align="center"><img src="https://github.com/user-attachments/assets/2c5dab06-d116-47d8-bb2e-fa54396dd4b1" alt="Argonath" width="250"></p>
+
 # Argonath
 
 A lightweight, single-game server management panel with a clean web UI - packaged as a Docker image.
