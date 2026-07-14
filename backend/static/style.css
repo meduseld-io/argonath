@@ -70,9 +70,10 @@ header {
 }
 
 .footer-logo {
-    height: 48px;
+    height: 140px;
     width: auto;
     opacity: 0.5;
+    mix-blend-mode: lighten;
     transition: opacity 0.2s;
 }
 
