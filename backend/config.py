@@ -9,10 +9,22 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Paths
+# Paths - detect local dev vs Docker
+_app_dir = os.path.dirname(os.path.abspath(__file__))
+_project_root = os.path.dirname(_app_dir)
+
 CONFIG_DIR = os.environ.get("ARGONATH_CONFIG_DIR", "/config")
 DATA_DIR = os.environ.get("ARGONATH_DATA_DIR", "/data")
 GAME_DIR = os.environ.get("ARGONATH_GAME_DIR", "/game")
+
+# If running locally (not in Docker), use project-relative paths
+if not os.path.isdir(CONFIG_DIR):
+    CONFIG_DIR = os.path.join(_project_root, "config")
+if not os.path.isdir("/data"):
+    DATA_DIR = os.path.join(_project_root, "data")
+if not os.path.isdir("/game"):
+    GAME_DIR = os.path.join(_project_root, "game")
+
 CONFIG_FILE = os.path.join(CONFIG_DIR, "game.yml")
 
 # Load game.yml
