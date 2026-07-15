@@ -127,13 +127,13 @@
         // ================= WIDGET DEFINITIONS =================
 
         const DEFAULT_LAYOUT = [
-            { id: 'status-cards', x: 0, y: 0, w: 12, h: 2, minW: 6, minH: 2 },
-            { id: 'server-info', x: 0, y: 2, w: 6, h: 4, minW: 4, minH: 3 },
-            { id: 'controls', x: 6, y: 2, w: 6, h: 4, minW: 4, minH: 4 },
-            { id: 'charts', x: 0, y: 6, w: 12, h: 5, minW: 6, minH: 4 },
-            { id: 'server-logs', x: 0, y: 11, w: 6, h: 5, minW: 4, minH: 3 },
-            { id: 'startup-logs', x: 6, y: 11, w: 6, h: 5, minW: 4, minH: 3 },
-            { id: 'activity', x: 0, y: 16, w: 12, h: 4, minW: 6, minH: 3 }
+            { id: 'status-cards', x: 0, y: 0, w: 12, h: 3, minW: 6, minH: 2 },
+            { id: 'server-info', x: 0, y: 3, w: 6, h: 4, minW: 4, minH: 3 },
+            { id: 'controls', x: 6, y: 3, w: 6, h: 4, minW: 4, minH: 4 },
+            { id: 'charts', x: 0, y: 7, w: 12, h: 6, minW: 6, minH: 5 },
+            { id: 'server-logs', x: 0, y: 13, w: 6, h: 6, minW: 4, minH: 4 },
+            { id: 'startup-logs', x: 6, y: 13, w: 6, h: 6, minW: 4, minH: 4 },
+            { id: 'activity', x: 0, y: 19, w: 12, h: 5, minW: 6, minH: 3 }
         ];
 
         function getWidgetContent(id) {
@@ -212,7 +212,7 @@
 
             grid = GridStack.init({
                 column: 12,
-                cellHeight: 60,
+                cellHeight: 45,
                 margin: 6,
                 animate: false,
                 draggable: { handle: '.widget-header' },
