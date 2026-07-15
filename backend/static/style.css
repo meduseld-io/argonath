@@ -617,11 +617,18 @@ main {
 .widget-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 0.5rem;
     margin-bottom: 0.5rem;
     cursor: move;
     user-select: none;
     padding: 0.2rem 0;
+}
+
+.widget-header h3 {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .widget-header .drag-handle {
@@ -629,6 +636,27 @@ main {
     font-size: 10px;
     opacity: 0;
     transition: opacity 0.15s;
+    margin-left: auto;
+}
+
+.chart-legend {
+    display: flex;
+    gap: 0.75rem;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    display: inline-block;
 }
 
 .grid-stack-item:hover .widget-header .drag-handle {
