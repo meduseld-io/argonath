@@ -235,6 +235,44 @@ def write_startup_marker(message):
         logger.warning(f"Could not write startup marker: {e}")
 
 
+def get_player_count():
+    """
+    Get current player count. Returns int or None if unavailable.
+    This is a best-effort implementation that tries common patterns:
+    - Reads the game log file and looks for player join/leave messages
+    - Falls back to None if the game doesn't have a recognizable pattern
+
+    Override this function or extend it for game-specific player counting.
+    """
+    if not LOG_FILE or not os.path.exists(LOG_FILE):
+        return None
+
+    try:
+        # Try to count connected players from log patterns
+        # Common patterns across games:
+        # - "player connected" / "player disconnected"
+        # - "joined the game" / "left the game"
+        # - Active connection count from recent log lines
+        with open(LOG_FILE, "r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()[-500:]
+
+        connected = set()
+        for line in lines:
+            lower = line.lower()
+            # Generic patterns - covers many Source/Unity games
+            if "connected" in lower or "joined" in lower or "logged in" in lower:
+                connected.add(line.strip())
+            if "disconnected" in lower or "left" in lower or "logged out" in lower:
+                connected.discard(line.strip())
+
+        # If we found no join/leave patterns, return None (unknown)
+        # This avoids showing "0" when we simply can't detect players
+        return None
+    except Exception as e:
+        logger.debug(f"Player count detection failed: {e}")
+        return None
+
+
 def monitor_loop():
     """Background thread: monitor server state and detect crashes"""
     global _idle_since

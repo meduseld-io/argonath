@@ -52,7 +52,7 @@ from models import init_db, log_activity as db_log_activity
 from auth import get_current_user, require_auth, require_admin, login, logout, register
 from process_manager import (
     get_state, set_state, is_running, launch_server, kill_server,
-    get_uptime, get_server_usage, monitor_loop, write_startup_marker,
+    get_uptime, get_server_usage, get_player_count, monitor_loop, write_startup_marker,
 )
 from stats import get_system_stats, get_health, get_history, collect_loop
 from updates import check_for_updates, run_update, get_update_info, check_updates_loop
@@ -362,6 +362,7 @@ def api_stats():
             "uptime": get_uptime() if running else 0,
             "health": get_health(stats),
             "version": update_info,
+            "players": get_player_count() if running else None,
         })
     except Exception as e:
         logger.error(f"Error in /api/stats: {e}")
@@ -425,6 +426,17 @@ def api_check_update():
 @app.route("/health")
 def health_check():
     return jsonify({"status": "ok", "game": GAME_NAME, "state": get_state()})
+
+
+# ================= API: ACTIVITY LOG =================
+
+
+@app.route("/api/activity")
+@require_auth
+def api_activity():
+    """Get recent activity log"""
+    from models import get_activity_log
+    return jsonify({"activity": get_activity_log(limit=30)})
 
 
 # ================= STARTUP =================
