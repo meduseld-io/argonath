@@ -128,13 +128,13 @@
 
         const DEFAULT_LAYOUT = [
             { id: 'status-cards', x: 0, y: 0, w: 12, h: 3, minW: 6, minH: 2 },
-            { id: 'server-info', x: 0, y: 3, w: 6, h: 5, minW: 4, minH: 4 },
+            { id: 'server-info', x: 0, y: 3, w: 6, h: 6, minW: 4, minH: 3 },
             { id: 'controls', x: 6, y: 3, w: 6, h: 2, minW: 4, minH: 2 },
-            { id: 'quick-info', x: 6, y: 5, w: 6, h: 3, minW: 4, minH: 2 },
-            { id: 'charts', x: 0, y: 8, w: 12, h: 6, minW: 6, minH: 5 },
-            { id: 'server-logs', x: 0, y: 14, w: 6, h: 6, minW: 4, minH: 4 },
-            { id: 'startup-logs', x: 6, y: 14, w: 6, h: 6, minW: 4, minH: 4 },
-            { id: 'activity', x: 0, y: 20, w: 12, h: 5, minW: 6, minH: 3 }
+            { id: 'quick-info', x: 6, y: 5, w: 6, h: 4, minW: 4, minH: 2 },
+            { id: 'charts', x: 0, y: 9, w: 12, h: 7, minW: 6, minH: 5 },
+            { id: 'server-logs', x: 0, y: 16, w: 6, h: 6, minW: 4, minH: 4 },
+            { id: 'startup-logs', x: 6, y: 16, w: 6, h: 6, minW: 4, minH: 4 },
+            { id: 'activity', x: 0, y: 22, w: 12, h: 5, minW: 6, minH: 3 }
         ];
 
         function getWidgetContent(id) {
@@ -154,10 +154,12 @@
                     return `
                         <div class="widget-header"><h3>Server Info</h3><span class="drag-handle">&#9776;</span></div>
                         <section class="server-info">
+                            <div class="info-row"><span>State:</span><span id="server-state-text" class="badge">--</span></div>
                             <div class="info-row"><span>Players:</span><span id="player-count">-- / ${MAX_PLAYERS}</span></div>
                             <div class="info-row"><span>Uptime:</span><span id="uptime">--</span></div>
                             <div class="info-row"><span>Health:</span><span id="health" class="badge">--</span></div>
                             ${STEAMCMD_ENABLED ? '<div class="info-row"><span>Build:</span><span id="build-info">--</span></div>' : ''}
+                            <div class="info-row"><span>Last Restart:</span><span id="last-restart">--</span></div>
                         </section>`;
                 case 'controls':
                     return `
@@ -217,8 +219,8 @@
 
             grid = GridStack.init({
                 column: 12,
-                cellHeight: 45,
-                margin: 6,
+                cellHeight: 40,
+                margin: 4,
                 animate: false,
                 draggable: { handle: '.widget-header' },
                 resizable: { handles: 'se,sw' },
@@ -529,6 +531,14 @@
                 badge.textContent = data.state;
                 badge.className = 'badge state-' + data.state;
 
+                // State text in server info
+                const stateTextEl = document.getElementById('server-state-text');
+                if (stateTextEl) {
+                    const stateLabels = { running: 'Running', offline: 'Offline', crashed: 'Crashed', starting: 'Starting', stopping: 'Stopping', restarting: 'Restarting' };
+                    stateTextEl.textContent = stateLabels[data.state] || data.state;
+                    stateTextEl.className = 'badge state-' + data.state;
+                }
+
                 // Dynamic tab title
                 const icons = { running: '🟢', offline: '🔴', crashed: '💥', starting: '🟡', stopping: '🟠', restarting: '🟡' };
                 document.title = `${icons[data.state] || ''} ${GAME_NAME} | Argonath`;
@@ -567,6 +577,17 @@
                 // Uptime
                 const uptimeEl = document.getElementById('uptime');
                 if (uptimeEl) uptimeEl.textContent = formatUptime(data.uptime || 0);
+
+                // Last restart
+                const lastRestartEl = document.getElementById('last-restart');
+                if (lastRestartEl) {
+                    if (data.uptime && data.state === 'running') {
+                        const restartTime = new Date(Date.now() - data.uptime * 1000);
+                        lastRestartEl.textContent = restartTime.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    } else {
+                        lastRestartEl.textContent = '--';
+                    }
+                }
 
                 // Player count
                 const playerEl = document.getElementById('player-count');

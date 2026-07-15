@@ -195,6 +195,10 @@ main {
     border-radius: var(--radius);
     padding: 0.75rem 1.25rem;
     border-left: 3px solid var(--accent-dim);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .info-row {
@@ -223,7 +227,8 @@ main {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 0.75rem;
-    align-content: start;
+    align-content: center;
+    height: 100%;
 }
 
 /* Quick Info widget */
@@ -232,6 +237,10 @@ main {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 0.75rem 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .qi-row {
@@ -654,10 +663,10 @@ main {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.3rem;
     cursor: move;
     user-select: none;
-    padding: 0.2rem 0;
+    padding: 0.1rem 0;
 }
 
 .widget-header h3 {
