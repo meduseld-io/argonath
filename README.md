@@ -4,7 +4,7 @@
 
 A lightweight, single-game server management panel with a clean web UI - packaged as a Docker image.
 
-Fills the gap between Pterodactyl (complex, overkill for one game) and LinuxGSM (CLI-only, no UI). A simple Docker container that gives you start/stop/restart/kill controls, live system stats, server logs, and update management for any Steam-based dedicated server.
+Fills the gap between [Pterodactyl](https://pterodactyl.io/) (multi-server, multi-game) and [LinuxGSM](https://linuxgsm.com/) (CLI-based). Argonath is for when you just want a single Docker container with a web UI to manage one dedicated server.
 
 ## Features
 
