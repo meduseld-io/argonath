@@ -8,15 +8,20 @@ Fills the gap between Pterodactyl (complex, overkill for one game) and LinuxGSM 
 
 ## Features
 
-- **Process management** - Start, stop, restart, force kill
+- **Process management** - Start, stop, restart, force kill with toast notifications
 - **Live system stats** - CPU, RAM, disk, temperature with 30-min history charts
+- **Player count** - Shows current players when detectable
 - **Server logs** - Real-time game server log viewer
 - **Startup logs** - Separate panel for launch script output
+- **Activity log** - Tracks who did what and when
 - **Update detection** - SteamCMD build ID checking, one-click update on restart
 - **Health monitoring** - Server state detection (running/offline/crashed)
+- **Customisable dashboard** - Drag, drop, and resize any widget. Layout saved per user.
+- **Colour themes** - Pick from preset accent colours or use a custom colour picker. Background customisable too.
+- **Mobile responsive** - Automatically stacks to single-column on small screens
 - **Rate limiting** - Prevent accidental double-starts
 - **Simple auth** - Local username/password (first user = admin), or disable auth entirely
-- **Dark UI** - Clean dark/gold theme
+- **Docker healthcheck** - Built-in health endpoint for container orchestration
 
 ## Quick Start
 
@@ -60,7 +65,18 @@ compatibility:
   wine: false
 ```
 
-See `examples/` for Valheim, Icarus, and Satisfactory configurations.
+## Example Configs
+
+The `examples/` directory includes ready-to-use configurations for 22 games:
+
+**Native Linux:**
+Valheim, Satisfactory, Palworld, Project Zomboid, Terraria, Rust, 7 Days to Die, Counter-Strike 2, Core Keeper, Left 4 Dead 2, Don't Starve Together, Unturned, Arma 3
+
+**Wine/Proton required:**
+Icarus, Enshrouded, V Rising, ARK: Survival Ascended, Sons of the Forest, Conan Exiles, Astroneer
+
+**Non-Steam (no SteamCMD):**
+Minecraft (Java), Factorio
 
 ## Docker Compose
 
@@ -91,6 +107,16 @@ volumes:
 | `IDLE_SHUTDOWN_MINUTES` | `0` | Auto-stop after N minutes with 0 players (0 = disabled) |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |
 
+## Dashboard Customisation
+
+Click the gear icon in the header to open settings:
+
+- **Accent colour** - 10 presets (Stone, Gold, Blue, Teal, Green, Purple, Red, Orange, Pink, Cyan) plus a custom picker
+- **Background** - 8 dark presets (Charcoal, Midnight, Deep Green, Navy, Slate, Dark Brown, Pure Black, Warm Grey) plus a custom picker
+- **Layout lock** - Uncheck to drag and resize widgets freely, recheck to lock in place
+
+All preferences are saved to your browser's localStorage and persist across sessions. Click "Reset All" to restore defaults.
+
 ## Auth Modes
 
 - **`local`** (default) - Username/password accounts. First user to register becomes admin. Admins can start/stop/restart. Viewers can only see stats and logs.
@@ -101,10 +127,11 @@ volumes:
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Public health check |
-| `/api/stats` | GET | System + server stats |
+| `/api/stats` | GET | System + server stats + player count |
 | `/api/history` | GET | 30-min stats history |
 | `/api/logs` | GET | Game server logs |
 | `/api/startup-logs` | GET | Startup/shutdown log |
+| `/api/activity` | GET | Recent activity log |
 | `/api/start` | POST | Start server |
 | `/api/stop` | POST | Stop server |
 | `/api/restart` | POST | Restart (with update) |
@@ -116,7 +143,7 @@ volumes:
 ```
 docker container
 ├── Flask app (port 5000)
-│   ├── Web UI (single-page panel)
+│   ├── Web UI (gridstack.js dashboard)
 │   ├── Process manager (subprocess + psutil)
 │   ├── Stats collector (background thread)
 │   └── SQLite database (users, activity log)
