@@ -140,7 +140,7 @@
                         </section>`;
                 case 'charts':
                     return `
-                        <div class="widget-header"><h3>Performance</h3><span class="chart-legend"><span class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>System</span><span class="legend-item"><span class="legend-dot" style="background:#4caf50"></span>Server</span></span><span class="drag-handle">&#9776;</span></div>
+                        <div class="widget-header"><h3>Performance</h3><span class="chart-legend"><span class="legend-item"><span class="legend-dot legend-dot-accent" style="background:var(--accent)"></span>System</span><span class="legend-item"><span class="legend-dot" style="background:#4caf50"></span>Server</span></span><span class="drag-handle">&#9776;</span></div>
                         <section class="charts">
                             <div class="chart-container"><h3>CPU Usage</h3><canvas id="chart-cpu"></canvas></div>
                             <div class="chart-container"><h3>RAM Usage</h3><canvas id="chart-ram"></canvas></div>
@@ -297,6 +297,17 @@
             document.documentElement.style.setProperty('--accent-dim', dim);
             localStorage.setItem('argonath_accent', hex);
             updateActivePreset('accent');
+            // Update chart line colours
+            if (cpuChart) {
+                cpuChart.data.datasets[0].borderColor = hex;
+                cpuChart.update();
+            }
+            if (ramChart) {
+                ramChart.data.datasets[0].borderColor = hex;
+                ramChart.update();
+            }
+            // Update legend dots
+            document.querySelectorAll('.legend-dot-accent').forEach(el => { el.style.background = hex; });
         }
 
         function applyBgColour(hex) {

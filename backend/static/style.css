@@ -102,7 +102,7 @@ header {
 }
 
 header h1 {
-    color: #888;
+    color: var(--accent);
     font-size: 1.2rem;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -166,6 +166,7 @@ main {
     border-radius: var(--radius);
     padding: 0.75rem;
     text-align: center;
+    border-top: 2px solid var(--accent-dim);
 }
 
 .card-label {
@@ -193,6 +194,7 @@ main {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 0.75rem 1.25rem;
+    border-left: 3px solid var(--accent-dim);
 }
 
 .info-row {
@@ -280,7 +282,7 @@ main {
 
 .chart-container h3 {
     font-size: 0.7rem;
-    color: var(--text-muted);
+    color: var(--accent-dim);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 0.25rem;
@@ -312,6 +314,7 @@ main {
 .log-viewer {
     background: #0a0a0a;
     border: 1px solid var(--border);
+    border-left: 3px solid var(--accent-dim);
     border-radius: var(--radius);
     padding: 0.75rem 1rem;
     flex: 1;
@@ -626,7 +629,7 @@ main {
 
 .widget-header h3 {
     font-size: 0.7rem;
-    color: var(--text-muted);
+    color: var(--accent);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -661,13 +664,6 @@ main {
 
 .grid-stack-item:hover .widget-header .drag-handle {
     opacity: 1;
-}
-
-.widget-header h3 {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
 }
 
 /* When layout is locked, hide drag indicators */
