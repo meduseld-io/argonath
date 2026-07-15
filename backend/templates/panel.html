@@ -100,6 +100,25 @@
         const GAME_NAME = '{{ game_name }}';
         const MAX_PLAYERS = {{ max_players }};
         const STEAMCMD_ENABLED = {{ 'true' if steamcmd_enabled else 'false' }};
+        const STEAM_APP_ID = '{{ steam_app_id }}';
+        const PROCESS_NAME = '{{ process_name }}';
+        const SERVER_ARGS = {{ server_args | tojson }};
+        const GAME_PORT = (function() {
+            for (let i = 0; i < SERVER_ARGS.length; i++) {
+                const a = SERVER_ARGS[i];
+                if (a.match && a.match(/-port[=:]/i)) return a.split(/[=:]/)[1];
+                if (a.toLowerCase() === '-port' || a.toLowerCase() === '+server.port') return SERVER_ARGS[i+1] || '';
+            }
+            return '';
+        })();
+        const QUERY_PORT = (function() {
+            for (let i = 0; i < SERVER_ARGS.length; i++) {
+                const a = SERVER_ARGS[i];
+                if (a.match && a.match(/-queryport[=:]/i)) return a.split(/[=:]/)[1];
+                if (a.toLowerCase() === '-queryport' || a.toLowerCase() === '+server.queryport') return SERVER_ARGS[i+1] || '';
+            }
+            return '';
+        })();
         let statsInterval, logsInterval, historyInterval;
         let cpuChart, ramChart;
         let lastState = '';

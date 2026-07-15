@@ -226,6 +226,34 @@ main {
     align-content: start;
 }
 
+/* Quick Info (below controls) */
+.quick-info {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+}
+
+.qi-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.2rem 0;
+    font-size: 0.7rem;
+}
+
+.qi-label {
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.6rem;
+}
+
+.qi-value {
+    color: var(--text-dim);
+    font-family: 'SF Mono', 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+}
+
 .btn {
     display: inline-block;
     padding: 0.55rem 1rem;
