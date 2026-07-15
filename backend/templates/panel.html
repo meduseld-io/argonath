@@ -147,6 +147,12 @@
                             <button class="btn btn-stop" id="btn-stop" onclick="serverAction('stop')">Stop</button>
                             <button class="btn btn-restart" id="btn-restart" onclick="serverAction('restart')">Restart</button>
                             <button class="btn btn-kill" id="btn-kill" onclick="serverAction('kill')">Kill</button>
+                        </section>
+                        <section class="quick-info">
+                            ${STEAM_APP_ID ? '<div class="qi-row"><span class="qi-label">App ID</span><span class="qi-value">' + STEAM_APP_ID + '</span></div>' : ''}
+                            <div class="qi-row"><span class="qi-label">Process</span><span class="qi-value">${PROCESS_NAME}</span></div>
+                            ${GAME_PORT ? '<div class="qi-row"><span class="qi-label">Port</span><span class="qi-value">' + GAME_PORT + '</span></div>' : ''}
+                            ${QUERY_PORT ? '<div class="qi-row"><span class="qi-label">Query</span><span class="qi-value">' + QUERY_PORT + '</span></div>' : ''}
                         </section>`;
                 case 'charts':
                     return `
@@ -194,7 +200,7 @@
                 resizable: { handles: 'se,sw' },
                 disableDrag: locked,
                 disableResize: locked,
-                float: false
+                float: true
             }, '#dashboard-grid');
 
             // Add widgets

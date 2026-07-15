@@ -31,6 +31,8 @@ from config import (
     STOP_TIMEOUT,
     RATE_LIMIT_WINDOW,
     RATE_LIMIT_MAX_REQUESTS,
+    SERVER_ARGS,
+    PROCESS_NAME,
 )
 
 # Configure logging
@@ -161,6 +163,8 @@ def home():
         steamcmd_enabled=STEAMCMD_ENABLED,
         auth_mode=AUTH_MODE,
         user=user,
+        server_args=SERVER_ARGS,
+        process_name=PROCESS_NAME,
     )
 
 
