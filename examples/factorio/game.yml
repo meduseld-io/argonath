@@ -1,0 +1,23 @@
+# Factorio Headless Server (no SteamCMD - uses official headless binary)
+game:
+  name: "Factorio"
+  steam_app_id: ""
+  process_name: "factorio"
+  launch_script: "/game/start.sh"
+  server_dir: "/game"
+  log_file: "/game/factorio-current.log"
+  max_players: 16
+  args: []
+
+server:
+  port: 5000
+  host: "0.0.0.0"
+
+auth:
+  mode: "local"
+
+steamcmd:
+  enabled: false
+
+compatibility:
+  wine: false

@@ -1,5 +1,5 @@
 /* Argonath - Game Server Panel */
-/* Dark theme with warm stone/gold accents */
+/* Dark theme with customizable accents */
 
 :root {
     --bg: #0d0d0d;
@@ -8,9 +8,9 @@
     --bg-input: #222;
     --border: #2a2a2a;
     --border-light: #333;
-    --gold: #c9a227;
-    --gold-bright: #e6b800;
-    --gold-dim: #8a6f1a;
+    --accent: #c9a227;
+    --accent-bright: #e6b800;
+    --accent-dim: #8a6f1a;
     --text: #e8e8e8;
     --text-dim: #888;
     --text-muted: #555;
@@ -92,7 +92,7 @@ header {
 }
 
 .footer-text a:hover {
-    color: var(--gold);
+    color: var(--accent);
 }
 
 .header-titles {
@@ -139,7 +139,7 @@ header h1 {
 .state-running { background: var(--green); color: #fff; }
 .state-offline { background: var(--red); color: #fff; }
 .state-crashed { background: #4a0000; color: #ff6b6b; border: 1px solid var(--red); }
-.state-starting, .state-restarting { background: var(--gold-dim); color: var(--gold-bright); }
+.state-starting, .state-restarting { background: var(--accent-dim); color: var(--accent-bright); }
 .state-stopping { background: #4a2800; color: var(--yellow); }
 
 .health-good { background: var(--green); color: #fff; }
@@ -148,7 +148,7 @@ header h1 {
 
 /* Main content */
 main {
-    max-width: 1100px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 1.5rem 2rem;
 }
@@ -158,7 +158,6 @@ main {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: 0.75rem;
-    margin-bottom: 1.5rem;
 }
 
 .card {
@@ -194,7 +193,6 @@ main {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 0.75rem 1.25rem;
-    margin-bottom: 1.5rem;
 }
 
 .info-row {
@@ -223,7 +221,7 @@ main {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 0.75rem;
-    margin-bottom: 1.5rem;
+    align-content: start;
 }
 
 .btn {
@@ -256,9 +254,9 @@ main {
 
 .btn-start { background: var(--green); color: #fff; }
 .btn-stop { background: var(--red); color: #fff; }
-.btn-restart { background: var(--gold-dim); color: var(--gold-bright); }
+.btn-restart { background: var(--accent-dim); color: var(--accent-bright); }
 .btn-kill { background: var(--purple); color: #fff; }
-.btn-primary { background: var(--gold); color: #000; width: 100%; font-weight: 700; }
+.btn-primary { background: var(--accent); color: #000; width: 100%; font-weight: 700; }
 .btn-sm { padding: 0.25rem 0.6rem; font-size: 0.7rem; background: var(--border-light); color: var(--text-dim); border-radius: 4px; }
 
 /* Charts */
@@ -266,15 +264,18 @@ main {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
-    margin-bottom: 1.5rem;
+    height: calc(100% - 1.5rem);
 }
 
 .chart-container {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 1rem;
-    height: 220px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .chart-container h3 {
@@ -282,16 +283,21 @@ main {
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
+    flex-shrink: 0;
 }
 
 .chart-container canvas {
-    max-height: 170px;
+    flex: 1;
+    min-height: 0;
+    width: 100% !important;
 }
 
 /* Logs */
 .logs-section {
-    margin-bottom: 1.5rem;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .logs-section h3 {
@@ -300,6 +306,7 @@ main {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 0.4rem;
+    flex-shrink: 0;
 }
 
 .log-viewer {
@@ -307,7 +314,8 @@ main {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 0.75rem 1rem;
-    max-height: 260px;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
     font-size: 0.7rem;
@@ -332,6 +340,14 @@ main {
     border-radius: 3px;
 }
 
+/* Hide scrollbar on grid items - content should fit */
+.grid-stack-item-content::-webkit-scrollbar {
+    display: none;
+}
+.grid-stack-item-content {
+    scrollbar-width: none;
+}
+
 /* Auth Pages */
 .auth-page {
     display: flex;
@@ -352,7 +368,7 @@ main {
 }
 
 .auth-container h1 {
-    color: var(--gold);
+    color: var(--accent);
     margin-bottom: 0.25rem;
     font-size: 1.4rem;
 }
@@ -390,7 +406,7 @@ main {
 
 .form-group input:focus {
     outline: none;
-    border-color: var(--gold);
+    border-color: var(--accent);
 }
 
 .error-msg {
@@ -410,7 +426,7 @@ main {
 }
 
 .auth-link a {
-    color: var(--gold);
+    color: var(--accent);
     text-decoration: none;
 }
 
@@ -419,6 +435,260 @@ main {
     font-size: 0.65rem;
     color: var(--text-muted);
     font-style: italic;
+}
+
+/* ================= SETTINGS PANEL ================= */
+
+.settings-toggle {
+    background: none;
+    border: 1px solid var(--border-light);
+    color: var(--text-dim);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
+    font-size: 14px;
+}
+
+.settings-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.settings-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.settings-overlay.open {
+    display: flex;
+}
+
+.settings-modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 420px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.settings-modal h2 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    color: var(--text);
+}
+
+.settings-section {
+    margin-bottom: 1.25rem;
+}
+
+.settings-section h4 {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+}
+
+.color-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.color-preset {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+}
+
+.color-preset:hover {
+    transform: scale(1.15);
+}
+
+.color-preset.active {
+    border-color: #fff;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.3);
+}
+
+.color-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+}
+
+.color-input-row label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+}
+
+.color-input-row input[type="color"] {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.settings-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.settings-actions .btn {
+    flex: 1;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+}
+
+.btn-secondary {
+    background: var(--border-light);
+    color: var(--text-dim);
+}
+
+.btn-danger {
+    background: rgba(198, 40, 40, 0.2);
+    color: var(--red-bright);
+    border: 1px solid var(--red);
+}
+
+.lock-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.lock-toggle label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    cursor: pointer;
+}
+
+.lock-toggle input[type="checkbox"] {
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+/* ================= GRIDSTACK OVERRIDES ================= */
+
+.grid-stack {
+    min-height: 0 !important;
+}
+
+.grid-stack-item {
+    transition: none;
+}
+
+.grid-stack-item-content {
+    background: transparent;
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.grid-stack > .grid-stack-item > .grid-stack-item-content {
+    inset: 4px !important;
+    overflow: hidden;
+}
+
+/* Drag handle */
+.widget-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    cursor: move;
+    user-select: none;
+    padding: 0.2rem 0;
+}
+
+.widget-header .drag-handle {
+    color: var(--text-muted);
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.grid-stack-item:hover .widget-header .drag-handle {
+    opacity: 1;
+}
+
+.widget-header h3 {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* When layout is locked, hide drag indicators */
+.layout-locked .widget-header {
+    cursor: default;
+}
+
+.layout-locked .widget-header .drag-handle {
+    display: none;
+}
+
+/* Resize handle - only visible when unlocked */
+.grid-stack > .grid-stack-item > .ui-resizable-handle {
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.grid-stack > .grid-stack-item:hover > .ui-resizable-handle {
+    opacity: 1;
+}
+
+.layout-locked .grid-stack > .grid-stack-item > .ui-resizable-handle {
+    display: none !important;
+}
+
+/* Placeholder */
+.grid-stack-placeholder > .placeholder-content {
+    border: 2px dashed var(--accent);
+    border-radius: var(--radius);
+    background: rgba(201, 162, 39, 0.05);
+}
+
+/* Widget inner sections fill the item */
+.widget-header {
+    flex-shrink: 0;
+}
+
+.grid-stack-item-content > .widget-header ~ section,
+.grid-stack-item-content > .widget-header ~ .logs-section {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.grid-stack-item .status-cards,
+.grid-stack-item .server-info,
+.grid-stack-item .controls {
+    margin-bottom: 0;
+    overflow: hidden;
 }
 
 /* Responsive */

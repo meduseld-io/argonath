@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ game_name }} | Argonath</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10/dist/gridstack.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10/dist/gridstack-extra.min.css">
+    <script>
+        // Apply saved theme before paint to prevent flash
+        (function() {
+            const accent = localStorage.getItem('argonath_accent');
+            const bg = localStorage.getItem('argonath_bg');
+            if (accent) document.documentElement.style.setProperty('--accent', accent);
+            if (bg) document.documentElement.style.setProperty('--bg', bg);
+        })();
+    </script>
 </head>
 <body>
     <header>
@@ -18,93 +29,17 @@
         <div class="header-right">
             {% if auth_mode != 'none' %}
             <span class="user-info">{{ user.username }} ({{ user.role }})</span>
+            {% endif %}
+            <button class="settings-toggle" id="settings-btn" aria-label="Settings">&#9881;</button>
+            {% if auth_mode != 'none' %}
             <a href="/logout" class="btn btn-sm">Logout</a>
             {% endif %}
         </div>
     </header>
 
     <main>
-        <!-- Status Cards -->
-        <section class="status-cards">
-            <div class="card">
-                <div class="card-label">System CPU</div>
-                <div class="card-value" id="stat-cpu">--%</div>
-            </div>
-            <div class="card">
-                <div class="card-label">CPU Temp</div>
-                <div class="card-value" id="stat-temp">--°C</div>
-            </div>
-            <div class="card">
-                <div class="card-label">System RAM</div>
-                <div class="card-value" id="stat-ram">-- / -- GB</div>
-            </div>
-            <div class="card">
-                <div class="card-label">Disk</div>
-                <div class="card-value" id="stat-disk">-- / -- GB</div>
-            </div>
-            <div class="card">
-                <div class="card-label">Server CPU</div>
-                <div class="card-value" id="stat-server-cpu">--</div>
-            </div>
-            <div class="card">
-                <div class="card-label">Server RAM</div>
-                <div class="card-value" id="stat-server-ram">--</div>
-            </div>
-        </section>
-
-        <!-- Server Info -->
-        <section class="server-info">
-            <div class="info-row">
-                <span>Uptime:</span>
-                <span id="uptime">--</span>
-            </div>
-            <div class="info-row">
-                <span>Health:</span>
-                <span id="health" class="badge">--</span>
-            </div>
-            {% if steamcmd_enabled %}
-            <div class="info-row">
-                <span>Build:</span>
-                <span id="build-info">--</span>
-            </div>
-            {% endif %}
-        </section>
-
-        <!-- Control Buttons -->
-        <section class="controls">
-            <button class="btn btn-start" id="btn-start" onclick="serverAction('start')">Start</button>
-            <button class="btn btn-stop" id="btn-stop" onclick="serverAction('stop')">Stop</button>
-            <button class="btn btn-restart" id="btn-restart" onclick="serverAction('restart')">Restart</button>
-            <button class="btn btn-kill" id="btn-kill" onclick="serverAction('kill')">Kill</button>
-        </section>
-
-        <!-- Charts -->
-        <section class="charts">
-            <div class="chart-container">
-                <h3>CPU Usage</h3>
-                <canvas id="chart-cpu"></canvas>
-            </div>
-            <div class="chart-container">
-                <h3>RAM Usage</h3>
-                <canvas id="chart-ram"></canvas>
-            </div>
-        </section>
-
-        <!-- Game Server Logs -->
-        <section class="logs-section">
-            <h3>Server Logs</h3>
-            <div class="log-viewer" id="log-viewer">
-                <pre id="log-content">Loading...</pre>
-            </div>
-        </section>
-
-        <!-- Startup Logs -->
-        <section class="logs-section">
-            <h3>Startup Logs</h3>
-            <div class="log-viewer" id="startup-log-viewer">
-                <pre id="startup-log-content">Loading...</pre>
-            </div>
-        </section>
+        <div class="grid-stack" id="dashboard-grid">
+        </div>
 
         <!-- Footer -->
         <footer class="panel-footer">
@@ -113,13 +48,356 @@
         </footer>
     </main>
 
+    <!-- Settings Modal -->
+    <div class="settings-overlay" id="settings-overlay">
+        <div class="settings-modal">
+            <h2>Dashboard Settings</h2>
+
+            <div class="settings-section">
+                <h4>Accent Colour</h4>
+                <div class="color-presets" id="accent-presets"></div>
+                <div class="color-input-row">
+                    <label for="accent-custom">Custom:</label>
+                    <input type="color" id="accent-custom" value="#c9a227">
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>Background</h4>
+                <div class="color-presets" id="bg-presets"></div>
+                <div class="color-input-row">
+                    <label for="bg-custom">Custom:</label>
+                    <input type="color" id="bg-custom" value="#0d0d0d">
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>Layout</h4>
+                <div class="lock-toggle">
+                    <input type="checkbox" id="lock-layout" checked>
+                    <label for="lock-layout">Lock layout (prevent drag/resize)</label>
+                </div>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn btn-secondary" id="settings-close">Close</button>
+                <button class="btn btn-danger" id="settings-reset">Reset All</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gridstack@10/dist/gridstack-all.js"></script>
     <script>
         const GAME_NAME = '{{ game_name }}';
         const MAX_PLAYERS = {{ max_players }};
+        const STEAMCMD_ENABLED = {{ 'true' if steamcmd_enabled else 'false' }};
         let statsInterval, logsInterval, historyInterval;
         let cpuChart, ramChart;
         let lastState = '';
+        let grid;
+
+        // ================= WIDGET DEFINITIONS =================
+
+        const DEFAULT_LAYOUT = [
+            { id: 'status-cards', x: 0, y: 0, w: 12, h: 2, minW: 6, minH: 2 },
+            { id: 'server-info', x: 0, y: 2, w: 6, h: 3, minW: 4, minH: 3 },
+            { id: 'controls', x: 6, y: 2, w: 6, h: 3, minW: 4, minH: 2 },
+            { id: 'charts', x: 0, y: 5, w: 12, h: 5, minW: 6, minH: 4 },
+            { id: 'server-logs', x: 0, y: 10, w: 6, h: 5, minW: 4, minH: 3 },
+            { id: 'startup-logs', x: 6, y: 10, w: 6, h: 5, minW: 4, minH: 3 }
+        ];
+
+        function getWidgetContent(id) {
+            switch (id) {
+                case 'status-cards':
+                    return `
+                        <div class="widget-header"><h3>System Status</h3><span class="drag-handle">&#9776;</span></div>
+                        <section class="status-cards">
+                            <div class="card"><div class="card-label">System CPU</div><div class="card-value" id="stat-cpu">--%</div></div>
+                            <div class="card"><div class="card-label">CPU Temp</div><div class="card-value" id="stat-temp">--°C</div></div>
+                            <div class="card"><div class="card-label">System RAM</div><div class="card-value" id="stat-ram">-- / -- GB</div></div>
+                            <div class="card"><div class="card-label">Disk</div><div class="card-value" id="stat-disk">-- / -- GB</div></div>
+                            <div class="card"><div class="card-label">Server CPU</div><div class="card-value" id="stat-server-cpu">--</div></div>
+                            <div class="card"><div class="card-label">Server RAM</div><div class="card-value" id="stat-server-ram">--</div></div>
+                        </section>`;
+                case 'server-info':
+                    return `
+                        <div class="widget-header"><h3>Server Info</h3><span class="drag-handle">&#9776;</span></div>
+                        <section class="server-info">
+                            <div class="info-row"><span>Uptime:</span><span id="uptime">--</span></div>
+                            <div class="info-row"><span>Health:</span><span id="health" class="badge">--</span></div>
+                            ${STEAMCMD_ENABLED ? '<div class="info-row"><span>Build:</span><span id="build-info">--</span></div>' : ''}
+                        </section>`;
+                case 'controls':
+                    return `
+                        <div class="widget-header"><h3>Controls</h3><span class="drag-handle">&#9776;</span></div>
+                        <section class="controls">
+                            <button class="btn btn-start" id="btn-start" onclick="serverAction('start')">Start</button>
+                            <button class="btn btn-stop" id="btn-stop" onclick="serverAction('stop')">Stop</button>
+                            <button class="btn btn-restart" id="btn-restart" onclick="serverAction('restart')">Restart</button>
+                            <button class="btn btn-kill" id="btn-kill" onclick="serverAction('kill')">Kill</button>
+                        </section>`;
+                case 'charts':
+                    return `
+                        <div class="widget-header"><h3>Performance</h3><span class="drag-handle">&#9776;</span></div>
+                        <section class="charts">
+                            <div class="chart-container"><h3>CPU Usage</h3><canvas id="chart-cpu"></canvas></div>
+                            <div class="chart-container"><h3>RAM Usage</h3><canvas id="chart-ram"></canvas></div>
+                        </section>`;
+                case 'server-logs':
+                    return `
+                        <div class="widget-header"><h3>Server Logs</h3><span class="drag-handle">&#9776;</span></div>
+                        <section class="logs-section">
+                            <div class="log-viewer" id="log-viewer"><pre id="log-content">Loading...</pre></div>
+                        </section>`;
+                case 'startup-logs':
+                    return `
+                        <div class="widget-header"><h3>Startup Logs</h3><span class="drag-handle">&#9776;</span></div>
+                        <section class="logs-section">
+                            <div class="log-viewer" id="startup-log-viewer"><pre id="startup-log-content">Loading...</pre></div>
+                        </section>`;
+                default:
+                    return '';
+            }
+        }
+
+        // ================= GRIDSTACK INIT =================
+
+        function initGrid() {
+            const savedLayout = localStorage.getItem('argonath_layout');
+            const layout = savedLayout ? JSON.parse(savedLayout) : DEFAULT_LAYOUT;
+            const locked = localStorage.getItem('argonath_layout_locked') !== 'false';
+
+            grid = GridStack.init({
+                column: 12,
+                cellHeight: 60,
+                margin: 6,
+                animate: false,
+                draggable: { handle: '.widget-header' },
+                resizable: { handles: 'se,sw' },
+                disableDrag: locked,
+                disableResize: locked,
+                float: false
+            }, '#dashboard-grid');
+
+            // Add widgets
+            layout.forEach(item => {
+                grid.addWidget({
+                    id: item.id,
+                    x: item.x,
+                    y: item.y,
+                    w: item.w,
+                    h: item.h,
+                    minW: item.minW || 4,
+                    minH: item.minH || 2,
+                    content: getWidgetContent(item.id)
+                });
+            });
+
+            // Save layout on change
+            grid.on('change', saveLayout);
+
+            if (locked) {
+                document.querySelector('main').classList.add('layout-locked');
+            }
+        }
+
+        function saveLayout() {
+            const items = grid.getGridItems().map(el => {
+                const node = el.gridstackNode;
+                return {
+                    id: node.id,
+                    x: node.x,
+                    y: node.y,
+                    w: node.w,
+                    h: node.h,
+                    minW: node.minW,
+                    minH: node.minH
+                };
+            });
+            localStorage.setItem('argonath_layout', JSON.stringify(items));
+        }
+
+        function setLayoutLocked(locked) {
+            localStorage.setItem('argonath_layout_locked', locked ? 'true' : 'false');
+            if (locked) {
+                grid.enableMove(false);
+                grid.enableResize(false);
+                document.querySelector('main').classList.add('layout-locked');
+            } else {
+                grid.enableMove(true);
+                grid.enableResize(true);
+                document.querySelector('main').classList.remove('layout-locked');
+            }
+        }
+
+        // ================= COLOUR CUSTOMISATION =================
+
+        const ACCENT_PRESETS = [
+            { name: 'Gold', value: '#c9a227' },
+            { name: 'Blue', value: '#2196f3' },
+            { name: 'Teal', value: '#009688' },
+            { name: 'Green', value: '#4caf50' },
+            { name: 'Purple', value: '#9c27b0' },
+            { name: 'Red', value: '#e53935' },
+            { name: 'Orange', value: '#ff9800' },
+            { name: 'Pink', value: '#e91e63' },
+            { name: 'Cyan', value: '#00bcd4' },
+            { name: 'Lime', value: '#cddc39' }
+        ];
+
+        const BG_PRESETS = [
+            { name: 'Charcoal', value: '#0d0d0d' },
+            { name: 'Midnight', value: '#0a0f1a' },
+            { name: 'Deep Green', value: '#0a1a0f' },
+            { name: 'Dark Navy', value: '#0d1117' },
+            { name: 'Slate', value: '#1a1a2e' },
+            { name: 'Dark Brown', value: '#1a1008' },
+            { name: 'Pure Black', value: '#000000' },
+            { name: 'Warm Grey', value: '#1c1c1c' }
+        ];
+
+        function hexToHsl(hex) {
+            let r = parseInt(hex.slice(1, 3), 16) / 255;
+            let g = parseInt(hex.slice(3, 5), 16) / 255;
+            let b = parseInt(hex.slice(5, 7), 16) / 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) { h = s = 0; }
+            else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    case b: h = ((r - g) / d + 4) / 6; break;
+                }
+            }
+            return { h: h * 360, s: s * 100, l: l * 100 };
+        }
+
+        function hslToHex(h, s, l) {
+            s /= 100; l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`;
+        }
+
+        function applyAccentColour(hex) {
+            const hsl = hexToHsl(hex);
+            const bright = hslToHex(hsl.h, Math.min(hsl.s + 10, 100), Math.min(hsl.l + 15, 85));
+            const dim = hslToHex(hsl.h, Math.max(hsl.s - 15, 20), Math.max(hsl.l - 20, 15));
+            document.documentElement.style.setProperty('--accent', hex);
+            document.documentElement.style.setProperty('--accent-bright', bright);
+            document.documentElement.style.setProperty('--accent-dim', dim);
+            localStorage.setItem('argonath_accent', hex);
+            updateActivePreset('accent');
+        }
+
+        function applyBgColour(hex) {
+            const hsl = hexToHsl(hex);
+            const elevated = hslToHex(hsl.h, hsl.s, Math.min(hsl.l + 3, 20));
+            const card = hslToHex(hsl.h, hsl.s, Math.min(hsl.l + 5, 22));
+            const input = hslToHex(hsl.h, hsl.s, Math.min(hsl.l + 8, 25));
+            const border = hslToHex(hsl.h, hsl.s, Math.min(hsl.l + 12, 28));
+            const borderLight = hslToHex(hsl.h, hsl.s, Math.min(hsl.l + 16, 32));
+            document.documentElement.style.setProperty('--bg', hex);
+            document.documentElement.style.setProperty('--bg-elevated', elevated);
+            document.documentElement.style.setProperty('--bg-card', card);
+            document.documentElement.style.setProperty('--bg-input', input);
+            document.documentElement.style.setProperty('--border', border);
+            document.documentElement.style.setProperty('--border-light', borderLight);
+            localStorage.setItem('argonath_bg', hex);
+            updateActivePreset('bg');
+        }
+
+        function updateActivePreset(type) {
+            const container = document.getElementById(type === 'accent' ? 'accent-presets' : 'bg-presets');
+            const saved = localStorage.getItem(type === 'accent' ? 'argonath_accent' : 'argonath_bg');
+            container.querySelectorAll('.color-preset').forEach(el => {
+                el.classList.toggle('active', el.dataset.value === saved);
+            });
+        }
+
+        function initSettings() {
+            // Build accent presets
+            const accentContainer = document.getElementById('accent-presets');
+            ACCENT_PRESETS.forEach(p => {
+                const btn = document.createElement('button');
+                btn.className = 'color-preset';
+                btn.style.background = p.value;
+                btn.dataset.value = p.value;
+                btn.title = p.name;
+                btn.setAttribute('aria-label', p.name);
+                btn.addEventListener('click', () => applyAccentColour(p.value));
+                accentContainer.appendChild(btn);
+            });
+
+            // Build bg presets
+            const bgContainer = document.getElementById('bg-presets');
+            BG_PRESETS.forEach(p => {
+                const btn = document.createElement('button');
+                btn.className = 'color-preset';
+                btn.style.background = p.value;
+                btn.dataset.value = p.value;
+                btn.title = p.name;
+                btn.setAttribute('aria-label', p.name);
+                btn.addEventListener('click', () => applyBgColour(p.value));
+                bgContainer.appendChild(btn);
+            });
+
+            // Custom colour inputs
+            document.getElementById('accent-custom').addEventListener('input', (e) => applyAccentColour(e.target.value));
+            document.getElementById('bg-custom').addEventListener('input', (e) => applyBgColour(e.target.value));
+
+            // Load saved colours
+            const savedAccent = localStorage.getItem('argonath_accent');
+            const savedBg = localStorage.getItem('argonath_bg');
+            if (savedAccent) {
+                applyAccentColour(savedAccent);
+                document.getElementById('accent-custom').value = savedAccent;
+            }
+            if (savedBg) {
+                applyBgColour(savedBg);
+                document.getElementById('bg-custom').value = savedBg;
+            }
+            updateActivePreset('accent');
+            updateActivePreset('bg');
+
+            // Lock toggle
+            const lockCheckbox = document.getElementById('lock-layout');
+            const locked = localStorage.getItem('argonath_layout_locked') !== 'false';
+            lockCheckbox.checked = locked;
+            lockCheckbox.addEventListener('change', (e) => setLayoutLocked(e.target.checked));
+
+            // Open/close settings
+            document.getElementById('settings-btn').addEventListener('click', () => {
+                document.getElementById('settings-overlay').classList.add('open');
+            });
+            document.getElementById('settings-close').addEventListener('click', () => {
+                document.getElementById('settings-overlay').classList.remove('open');
+            });
+            document.getElementById('settings-overlay').addEventListener('click', (e) => {
+                if (e.target === e.currentTarget) {
+                    document.getElementById('settings-overlay').classList.remove('open');
+                }
+            });
+
+            // Reset
+            document.getElementById('settings-reset').addEventListener('click', () => {
+                if (!confirm('Reset all customisations to defaults? This will restore the default colour scheme and layout.')) return;
+                localStorage.removeItem('argonath_accent');
+                localStorage.removeItem('argonath_bg');
+                localStorage.removeItem('argonath_layout');
+                localStorage.removeItem('argonath_layout_locked');
+                location.reload();
+            });
+        }
 
         // ================= CHARTS =================
 
@@ -128,31 +406,42 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: false,
+                layout: { padding: { top: 0, bottom: 5 } },
                 scales: {
                     x: { display: false },
                     y: { beginAtZero: true, ticks: { color: '#555', font: { size: 10 } }, grid: { color: '#1f1f1f' } }
                 },
-                plugins: { legend: { labels: { color: '#888', font: { size: 10 } } } }
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        align: 'end',
+                        labels: { color: '#888', font: { size: 9 }, boxWidth: 8, boxHeight: 8, padding: 6, usePointStyle: true, pointStyle: 'rect' }
+                    }
+                }
             };
 
-            cpuChart = new Chart(document.getElementById('chart-cpu'), {
+            const cpuEl = document.getElementById('chart-cpu');
+            const ramEl = document.getElementById('chart-ram');
+            if (!cpuEl || !ramEl) return;
+
+            cpuChart = new Chart(cpuEl, {
                 type: 'line',
                 data: {
                     labels: [],
                     datasets: [
-                        { label: 'System', data: [], borderColor: '#c9a227', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 },
+                        { label: 'System', data: [], borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#c9a227', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 },
                         { label: 'Server', data: [], borderColor: '#4caf50', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 }
                     ]
                 },
                 options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, max: 100 } } }
             });
 
-            ramChart = new Chart(document.getElementById('chart-ram'), {
+            ramChart = new Chart(ramEl, {
                 type: 'line',
                 data: {
                     labels: [],
                     datasets: [
-                        { label: 'System', data: [], borderColor: '#c9a227', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 },
+                        { label: 'System', data: [], borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#c9a227', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 },
                         { label: 'Server', data: [], borderColor: '#4caf50', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 }
                     ]
                 },
@@ -161,6 +450,7 @@
         }
 
         function updateCharts(history) {
+            if (!cpuChart || !ramChart) return;
             const labels = history.map(h => h.timestamp);
             cpuChart.data.labels = labels;
             cpuChart.data.datasets[0].data = history.map(h => h.system_cpu);
@@ -192,43 +482,51 @@
 
                 // System stats
                 if (data.stats) {
-                    document.getElementById('stat-cpu').textContent = data.stats.cpu.toFixed(1) + '%';
-                    document.getElementById('stat-temp').textContent = data.stats.cpu_temp !== null ? data.stats.cpu_temp + '°C' : 'N/A';
-                    document.getElementById('stat-ram').textContent = data.stats.ram_used.toFixed(1) + ' / ' + data.stats.ram_total.toFixed(1) + ' GB';
-                    document.getElementById('stat-disk').textContent = data.stats.disk_used.toFixed(0) + ' / ' + data.stats.disk_total.toFixed(0) + ' GB';
-
-                    // Color temp card
+                    const cpuEl = document.getElementById('stat-cpu');
                     const tempEl = document.getElementById('stat-temp');
-                    tempEl.classList.remove('temp-ok', 'temp-warn', 'temp-hot');
-                    if (data.stats.cpu_temp !== null) {
-                        if (data.stats.cpu_temp >= 75) tempEl.classList.add('temp-hot');
-                        else if (data.stats.cpu_temp >= 60) tempEl.classList.add('temp-warn');
-                        else tempEl.classList.add('temp-ok');
+                    const ramEl = document.getElementById('stat-ram');
+                    const diskEl = document.getElementById('stat-disk');
+                    if (cpuEl) cpuEl.textContent = data.stats.cpu.toFixed(1) + '%';
+                    if (tempEl) {
+                        tempEl.textContent = data.stats.cpu_temp !== null ? data.stats.cpu_temp + '°C' : 'N/A';
+                        tempEl.classList.remove('temp-ok', 'temp-warn', 'temp-hot');
+                        if (data.stats.cpu_temp !== null) {
+                            if (data.stats.cpu_temp >= 75) tempEl.classList.add('temp-hot');
+                            else if (data.stats.cpu_temp >= 60) tempEl.classList.add('temp-warn');
+                            else tempEl.classList.add('temp-ok');
+                        }
                     }
+                    if (ramEl) ramEl.textContent = data.stats.ram_used.toFixed(1) + ' / ' + data.stats.ram_total.toFixed(1) + ' GB';
+                    if (diskEl) diskEl.textContent = data.stats.disk_used.toFixed(0) + ' / ' + data.stats.disk_total.toFixed(0) + ' GB';
                 }
 
                 // Server stats
+                const serverCpuEl = document.getElementById('stat-server-cpu');
+                const serverRamEl = document.getElementById('stat-server-ram');
                 if (data.server) {
-                    document.getElementById('stat-server-cpu').textContent = data.server.cpu_raw.toFixed(1) + '%';
-                    document.getElementById('stat-server-ram').textContent = data.server.ram.toFixed(2) + ' GB';
+                    if (serverCpuEl) serverCpuEl.textContent = data.server.cpu_raw.toFixed(1) + '%';
+                    if (serverRamEl) serverRamEl.textContent = data.server.ram.toFixed(2) + ' GB';
                 } else {
-                    document.getElementById('stat-server-cpu').textContent = '--';
-                    document.getElementById('stat-server-ram').textContent = '--';
+                    if (serverCpuEl) serverCpuEl.textContent = '--';
+                    if (serverRamEl) serverRamEl.textContent = '--';
                 }
 
                 // Uptime
-                document.getElementById('uptime').textContent = formatUptime(data.uptime || 0);
+                const uptimeEl = document.getElementById('uptime');
+                if (uptimeEl) uptimeEl.textContent = formatUptime(data.uptime || 0);
 
                 // Health
                 const healthEl = document.getElementById('health');
-                healthEl.textContent = data.health || '--';
-                healthEl.className = 'badge health-' + (data.health || 'unknown');
+                if (healthEl) {
+                    healthEl.textContent = data.health || '--';
+                    healthEl.className = 'badge health-' + (data.health || 'unknown');
+                }
 
                 // Build info
                 const buildEl = document.getElementById('build-info');
                 if (buildEl && data.version) {
                     if (data.version.update_available) {
-                        buildEl.textContent = `Update available (${data.version.current_build} → ${data.version.latest_build})`;
+                        buildEl.textContent = `Update available (${data.version.current_build} \u2192 ${data.version.latest_build})`;
                         buildEl.classList.add('update-available');
                     } else {
                         buildEl.textContent = data.version.current_build || 'Unknown';
@@ -250,10 +548,10 @@
             const restart = document.getElementById('btn-restart');
             const kill = document.getElementById('btn-kill');
 
-            start.disabled = !['offline', 'crashed'].includes(state);
-            stop.disabled = !['running'].includes(state);
-            restart.disabled = !['running'].includes(state);
-            kill.disabled = !['running', 'restarting'].includes(state);
+            if (start) start.disabled = !['offline', 'crashed'].includes(state);
+            if (stop) stop.disabled = !['running'].includes(state);
+            if (restart) restart.disabled = !['running'].includes(state);
+            if (kill) kill.disabled = !['running', 'restarting'].includes(state);
         }
 
         function formatUptime(seconds) {
@@ -282,7 +580,6 @@
                     const data = await res.json();
                     alert('Error: ' + (data.error || 'Unknown error'));
                 }
-                // Fetch stats immediately after action
                 setTimeout(fetchStats, 500);
             } catch (e) {
                 console.error('Server action failed:', e);
@@ -299,6 +596,7 @@
                 const data = await res.json();
                 const el = document.getElementById('log-content');
                 const viewer = document.getElementById('log-viewer');
+                if (!el || !viewer) return;
                 const atBottom = viewer.scrollTop + viewer.clientHeight >= viewer.scrollHeight - 50;
                 el.textContent = data.lines.join('\n') || 'No logs available';
                 if (atBottom) viewer.scrollTop = viewer.scrollHeight;
@@ -312,7 +610,8 @@
                 const res = await fetch('/api/startup-logs');
                 if (!res.ok) return;
                 const data = await res.json();
-                document.getElementById('startup-log-content').textContent = data.lines.join('\n') || 'No startup logs';
+                const el = document.getElementById('startup-log-content');
+                if (el) el.textContent = data.lines.join('\n') || 'No startup logs';
             } catch (e) {
                 console.error('Failed to fetch startup logs:', e);
             }
@@ -332,9 +631,13 @@
         // ================= INIT =================
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Footer year
             document.getElementById('footer-year').textContent = new Date().getFullYear();
 
+            // Init grid first so DOM is populated
+            initGrid();
+
+            // Then init settings (colours), charts, and start polling
+            initSettings();
             initCharts();
             fetchStats();
             fetchLogs();

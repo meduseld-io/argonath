@@ -1,0 +1,25 @@
+# Counter-Strike 2 Dedicated Server
+game:
+  name: "Counter-Strike 2"
+  steam_app_id: "730"
+  process_name: "cs2"
+  launch_script: "/game/start.sh"
+  server_dir: "/game"
+  log_file: "/game/csgo/logs/console.log"
+  max_players: 10
+  args: ["-dedicated", "-port", "27015", "+game_type", "0", "+game_mode", "1", "+map", "de_dust2", "+sv_setsteamaccount", "YOUR_GSLT_TOKEN"]
+
+server:
+  port: 5000
+  host: "0.0.0.0"
+
+auth:
+  mode: "local"
+
+steamcmd:
+  enabled: true
+  install_dir: "/game"
+  validate: true
+
+compatibility:
+  wine: false

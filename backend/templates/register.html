@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register | {{ game_name }} - Argonath</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script>
+        // Apply saved theme before paint
+        (function() {
+            const accent = localStorage.getItem('argonath_accent');
+            const bg = localStorage.getItem('argonath_bg');
+            if (accent) document.documentElement.style.setProperty('--accent', accent);
+            if (bg) document.documentElement.style.setProperty('--bg', bg);
+        })();
+    </script>
 </head>
 <body class="auth-page">
     <div class="auth-container">

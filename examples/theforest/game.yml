@@ -1,0 +1,26 @@
+# Sons of the Forest / The Forest Dedicated Server (Wine/Proton required)
+game:
+  name: "Sons of the Forest"
+  steam_app_id: "2465200"
+  process_name: "SonsOfTheForestDS.exe"
+  launch_script: "/game/start.sh"
+  server_dir: "/game"
+  log_file: "/game/logs/sotf_server.log"
+  max_players: 8
+  args: []
+
+server:
+  port: 5000
+  host: "0.0.0.0"
+
+auth:
+  mode: "local"
+
+steamcmd:
+  enabled: true
+  install_dir: "/game"
+  validate: true
+
+compatibility:
+  wine: true
+  proton_version: "GE-Proton10-32"
