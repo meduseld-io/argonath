@@ -1,7 +1,7 @@
 services:
   panel:
-    build: .
-    # image: ghcr.io/meduseld-io/argonath:latest
+    image: ghcr.io/meduseld-io/argonath:latest
+    # build: .  # Uncomment for local development
     ports:
       - "5000:5000"
     volumes:
