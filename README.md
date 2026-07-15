@@ -107,6 +107,50 @@ volumes:
 | `IDLE_SHUTDOWN_MINUTES` | `0` | Auto-stop after N minutes with 0 players (0 = disabled) |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |
 
+## Custom Domain
+
+To serve Argonath on a custom domain (e.g. `panel.example.com`), put a reverse proxy in front of it. Here's an example with Nginx:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name panel.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/panel.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/panel.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+With Caddy (automatic HTTPS):
+
+```
+panel.example.com {
+    reverse_proxy 127.0.0.1:5000
+}
+```
+
+Or with Cloudflare Tunnel (no port forwarding needed):
+
+```bash
+cloudflared tunnel route dns <tunnel-id> panel.example.com
+```
+
+Then add the ingress rule in your tunnel config:
+
+```yaml
+ingress:
+  - hostname: panel.example.com
+    service: http://127.0.0.1:5000
+```
+
 ## Dashboard Customisation
 
 Click the gear icon in the header to open settings:
