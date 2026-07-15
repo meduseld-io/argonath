@@ -226,19 +226,24 @@ main {
     align-content: start;
 }
 
-/* Quick Info (below controls) */
+/* Quick Info widget */
 .quick-info {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--border);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
 }
 
 .qi-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.2rem 0;
+    padding: 0.25rem 0;
     font-size: 0.7rem;
+}
+
+.qi-row + .qi-row {
+    border-top: 1px solid var(--border);
 }
 
 .qi-label {

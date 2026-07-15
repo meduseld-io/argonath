@@ -128,12 +128,13 @@
 
         const DEFAULT_LAYOUT = [
             { id: 'status-cards', x: 0, y: 0, w: 12, h: 3, minW: 6, minH: 2 },
-            { id: 'server-info', x: 0, y: 3, w: 6, h: 4, minW: 4, minH: 3 },
-            { id: 'controls', x: 6, y: 3, w: 6, h: 4, minW: 4, minH: 4 },
-            { id: 'charts', x: 0, y: 7, w: 12, h: 6, minW: 6, minH: 5 },
-            { id: 'server-logs', x: 0, y: 13, w: 6, h: 6, minW: 4, minH: 4 },
-            { id: 'startup-logs', x: 6, y: 13, w: 6, h: 6, minW: 4, minH: 4 },
-            { id: 'activity', x: 0, y: 19, w: 12, h: 5, minW: 6, minH: 3 }
+            { id: 'server-info', x: 0, y: 3, w: 6, h: 5, minW: 4, minH: 4 },
+            { id: 'controls', x: 6, y: 3, w: 6, h: 2, minW: 4, minH: 2 },
+            { id: 'quick-info', x: 6, y: 5, w: 6, h: 3, minW: 4, minH: 2 },
+            { id: 'charts', x: 0, y: 8, w: 12, h: 6, minW: 6, minH: 5 },
+            { id: 'server-logs', x: 0, y: 14, w: 6, h: 6, minW: 4, minH: 4 },
+            { id: 'startup-logs', x: 6, y: 14, w: 6, h: 6, minW: 4, minH: 4 },
+            { id: 'activity', x: 0, y: 20, w: 12, h: 5, minW: 6, minH: 3 }
         ];
 
         function getWidgetContent(id) {
@@ -166,12 +167,16 @@
                             <button class="btn btn-stop" id="btn-stop" onclick="serverAction('stop')">Stop</button>
                             <button class="btn btn-restart" id="btn-restart" onclick="serverAction('restart')">Restart</button>
                             <button class="btn btn-kill" id="btn-kill" onclick="serverAction('kill')">Kill</button>
-                        </section>
+                        </section>`;
+                case 'quick-info':
+                    return `
+                        <div class="widget-header"><h3>Config</h3><span class="drag-handle">&#9776;</span></div>
                         <section class="quick-info">
                             ${STEAM_APP_ID ? '<div class="qi-row"><span class="qi-label">App ID</span><span class="qi-value">' + STEAM_APP_ID + '</span></div>' : ''}
                             <div class="qi-row"><span class="qi-label">Process</span><span class="qi-value">${PROCESS_NAME}</span></div>
                             ${GAME_PORT ? '<div class="qi-row"><span class="qi-label">Port</span><span class="qi-value">' + GAME_PORT + '</span></div>' : ''}
                             ${QUERY_PORT ? '<div class="qi-row"><span class="qi-label">Query</span><span class="qi-value">' + QUERY_PORT + '</span></div>' : ''}
+                            <div class="qi-row"><span class="qi-label">Max Players</span><span class="qi-value">${MAX_PLAYERS}</span></div>
                         </section>`;
                 case 'charts':
                     return `
