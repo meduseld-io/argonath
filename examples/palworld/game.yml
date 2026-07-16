@@ -21,5 +21,10 @@ steamcmd:
   install_dir: "/game"
   validate: true
 
+backup:
+  enabled: true
+  save_dir: "/game/Pal/Saved"
+  max_keep: 5
+
 compatibility:
   wine: false

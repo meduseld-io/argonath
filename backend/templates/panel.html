@@ -169,6 +169,7 @@
                             <button class="btn btn-stop" id="btn-stop" onclick="serverAction('stop')">Stop</button>
                             <button class="btn btn-restart" id="btn-restart" onclick="serverAction('restart')">Restart</button>
                             <button class="btn btn-kill" id="btn-kill" onclick="serverAction('kill')">Kill</button>
+                            <button class="btn btn-backup" id="btn-backup" onclick="backupAction()">Backup</button>
                         </section>`;
                 case 'quick-info':
                     return `
@@ -677,6 +678,51 @@
             } catch (e) {
                 console.error('Server action failed:', e);
                 showToast('Failed to execute action', 'error');
+            }
+        }
+
+        async function backupAction() {
+            const btn = document.getElementById('btn-backup');
+            try {
+                btn.disabled = true;
+                btn.textContent = 'Backing up...';
+                showToast('Starting backup...', 'info');
+                const res = await fetch('/api/backup', { method: 'POST' });
+                if (res.status === 409) {
+                    showToast('Backup already in progress', 'error');
+                } else if (!res.ok) {
+                    const data = await res.json();
+                    showToast('Error: ' + (data.error || 'Backup failed'), 'error');
+                } else {
+                    showToast('Backup started', 'success');
+                    // Poll for completion
+                    const pollBackup = setInterval(async () => {
+                        try {
+                            const statusRes = await fetch('/api/backup/status');
+                            const status = await statusRes.json();
+                            if (!status.in_progress) {
+                                clearInterval(pollBackup);
+                                btn.disabled = false;
+                                btn.textContent = 'Backup';
+                                showToast('Backup complete!', 'success');
+                                setTimeout(fetchActivity, 500);
+                            }
+                        } catch (e) {
+                            console.error('Backup status poll failed:', e);
+                            clearInterval(pollBackup);
+                            btn.disabled = false;
+                            btn.textContent = 'Backup';
+                        }
+                    }, 2000);
+                }
+            } catch (e) {
+                console.error('Backup action failed:', e);
+                showToast('Failed to start backup', 'error');
+            } finally {
+                if (!btn.disabled) {
+                    btn.disabled = false;
+                    btn.textContent = 'Backup';
+                }
             }
         }
 

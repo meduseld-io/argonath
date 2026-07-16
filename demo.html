@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🟢 Valheim | Argonath</title>
+    <link rel="stylesheet" href="backend/static/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10/dist/gridstack.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10/dist/gridstack-extra.min.css">
+    <style>
+        :root {
+            --accent: #c9a227;
+            --accent-bright: #e8c84a;
+            --accent-dim: #3d3010;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <div class="header-titles">
+                <h1>Argonath</h1>
+                <span class="game-name">Valheim</span>
+            </div>
+            <span class="badge state-running">running</span>
+        </div>
+        <div class="header-right">
+            <span class="user-info">admin (admin)</span>
+            <button class="settings-toggle" aria-label="Settings">&#9881;</button>
+            <a href="#" class="btn btn-sm">Logout</a>
+        </div>
+    </header>
+
+    <main>
+        <div class="grid-stack" id="dashboard-grid"></div>
+        <footer class="panel-footer">
+            <img src="backend/static/logo.png" alt="Argonath" class="footer-logo">
+            <p class="footer-text">&copy; 2026 <a href="https://github.com/meduseld-io" target="_blank">meduseld.io</a></p>
+        </footer>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gridstack@10/dist/gridstack-all.js"></script>
+    <script>
+        const DEFAULT_LAYOUT = [
+            { id: 'status-cards', x: 0, y: 0, w: 12, h: 3, minW: 6, minH: 2 },
+            { id: 'server-info', x: 0, y: 3, w: 6, h: 6, minW: 4, minH: 3 },
+            { id: 'controls', x: 6, y: 3, w: 6, h: 2, minW: 4, minH: 2 },
+            { id: 'quick-info', x: 6, y: 5, w: 6, h: 4, minW: 4, minH: 2 },
+            { id: 'charts', x: 0, y: 9, w: 12, h: 7, minW: 6, minH: 5 },
+            { id: 'server-logs', x: 0, y: 16, w: 6, h: 6, minW: 4, minH: 4 },
+            { id: 'startup-logs', x: 6, y: 16, w: 6, h: 6, minW: 4, minH: 4 },
+            { id: 'activity', x: 0, y: 22, w: 12, h: 5, minW: 6, minH: 3 }
+        ];
+
+        function getWidgetContent(id) {
+            switch (id) {
+                case 'status-cards':
+                    return `
+                        <div class="widget-header"><h3>System Status</h3></div>
+                        <section class="status-cards">
+                            <div class="card"><div class="card-label">System CPU</div><div class="card-value">23.4%</div></div>
+                            <div class="card"><div class="card-label">CPU Temp</div><div class="card-value temp-ok">47°C</div></div>
+                            <div class="card"><div class="card-label">System RAM</div><div class="card-value">12.8 / 32.0 GB</div></div>
+                            <div class="card"><div class="card-label">Disk</div><div class="card-value">234 / 931 GB</div></div>
+                            <div class="card"><div class="card-label">Server CPU</div><div class="card-value">78.2%</div></div>
+                            <div class="card"><div class="card-label">Server RAM</div><div class="card-value">4.31 GB</div></div>
+                        </section>`;
+                case 'server-info':
+                    return `
+                        <div class="widget-header"><h3>Server Info</h3></div>
+                        <section class="server-info">
+                            <div class="info-row"><span>State:</span><span class="badge state-running">Running</span></div>
+                            <div class="info-row"><span>Players:</span><span style="color:var(--green-bright)">4 / 10</span></div>
+                            <div class="info-row"><span>Uptime:</span><span>2d 14h 37m 12s</span></div>
+                            <div class="info-row"><span>Health:</span><span class="badge health-good">good</span></div>
+                            <div class="info-row"><span>Build:</span><span>14532091</span></div>
+                            <div class="info-row"><span>Last Restart:</span><span>Jul 12, 11:23 PM</span></div>
+                        </section>`;
+                case 'controls':
+                    return `
+                        <div class="widget-header"><h3>Controls</h3></div>
+                        <section class="controls">
+                            <button class="btn btn-start" disabled>Start</button>
+                            <button class="btn btn-stop">Stop</button>
+                            <button class="btn btn-restart">Restart</button>
+                            <button class="btn btn-kill">Kill</button>
+                        </section>`;
+                case 'quick-info':
+                    return `
+                        <div class="widget-header"><h3>Config</h3></div>
+                        <section class="quick-info">
+                            <div class="qi-row"><span class="qi-label">App ID</span><span class="qi-value">896660</span></div>
+                            <div class="qi-row"><span class="qi-label">Process</span><span class="qi-value">valheim_server.x86_64</span></div>
+                            <div class="qi-row"><span class="qi-label">Port</span><span class="qi-value">2456</span></div>
+                            <div class="qi-row"><span class="qi-label">Query</span><span class="qi-value">2457</span></div>
+                            <div class="qi-row"><span class="qi-label">Max Players</span><span class="qi-value">10</span></div>
+                        </section>`;
+                case 'charts':
+                    return `
+                        <div class="widget-header"><h3>Performance</h3><span class="chart-legend"><span class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>System</span><span class="legend-item"><span class="legend-dot" style="background:#4caf50"></span>Server</span></span></div>
+                        <section class="charts">
+                            <div class="chart-container"><h3>CPU Usage</h3><canvas id="chart-cpu"></canvas></div>
+                            <div class="chart-container"><h3>RAM Usage</h3><canvas id="chart-ram"></canvas></div>
+                        </section>`;
+                case 'server-logs':
+                    return `
+                        <div class="widget-header"><h3>Server Logs</h3></div>
+                        <section class="logs-section">
+                            <div class="log-viewer"><pre>07/15/2026 14:23:01: Connections 4 ZDOS:34521 sent:412 recv:1089
+07/15/2026 14:23:06: Connections 4 ZDOS:34523 sent:418 recv:1102
+07/15/2026 14:22:51: Got character ZDOID from Thorin : 1587430921:1
+07/15/2026 14:22:48: Got character ZDOID from Gandalf : 2938471023:3
+07/15/2026 14:22:31: Connections 4 ZDOS:34518 sent:398 recv:1076
+07/15/2026 14:22:26: Connections 4 ZDOS:34516 sent:392 recv:1058
+07/15/2026 14:22:21: Connections 4 ZDOS:34514 sent:387 recv:1043
+07/15/2026 14:21:58: RPC_PeerInfo from Legolas
+07/15/2026 14:21:55: Got handshake from client 76561198045267
+07/15/2026 14:21:12: Connections 3 ZDOS:34501 sent:356 recv:987
+07/15/2026 14:20:44: World saved ( 23.418s )
+07/15/2026 14:20:06: Connections 3 ZDOS:34489 sent:341 recv:962
+07/15/2026 14:19:31: Connections 3 ZDOS:34478 sent:328 recv:941</pre></div>
+                        </section>`;
+                case 'startup-logs':
+                    return `
+                        <div class="widget-header"><h3>Startup Logs</h3></div>
+                        <section class="logs-section">
+                            <div class="log-viewer"><pre>[2026-07-12 23:23:01] ✓ Server started successfully
+[2026-07-12 23:23:01] Valheim dedicated server started on port 2456
+[2026-07-12 23:22:58] DungeonDB Start 852
+[2026-07-12 23:22:57] Loading 127 location zones
+[2026-07-12 23:22:55] Initializing world "Midgard" (seed: meduseld2026)
+[2026-07-12 23:22:52] SteamCMD update complete - build 14532091
+[2026-07-12 23:22:34] Checking for updates via SteamCMD...
+[2026-07-12 23:22:33] Starting Valheim dedicated server...
+[2026-07-12 23:22:33] ──── SERVER START ────</pre></div>
+                        </section>`;
+                case 'activity':
+                    return `
+                        <div class="widget-header"><h3>Activity Log</h3></div>
+                        <section class="logs-section">
+                            <div class="activity-list">
+                                <div class="activity-item"><span class="activity-time">Jul 15, 2:21 PM</span><span class="activity-user">System</span><span class="activity-action">Player joined: Legolas</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 15, 12:44 PM</span><span class="activity-user">System</span><span class="activity-action">Player joined: Gandalf</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 15, 10:08 AM</span><span class="activity-user">System</span><span class="activity-action">Player joined: Thorin</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 14, 9:12 PM</span><span class="activity-user">admin</span><span class="activity-action">Server restarted</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 14, 6:30 PM</span><span class="activity-user">System</span><span class="activity-action">Player left: Bilbo</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 14, 2:15 PM</span><span class="activity-user">System</span><span class="activity-action">Player joined: Bilbo</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 13, 11:45 PM</span><span class="activity-user">admin</span><span class="activity-action">Server started</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 13, 11:44 PM</span><span class="activity-user">admin</span><span class="activity-action">Server stopped</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 12, 11:23 PM</span><span class="activity-user">admin</span><span class="activity-action">Server started</span></div>
+                            </div>
+                        </section>`;
+                default:
+                    return '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const grid = GridStack.init({
+                column: 12,
+                cellHeight: 40,
+                margin: 4,
+                animate: false,
+                disableDrag: true,
+                disableResize: true,
+                float: true
+            }, '#dashboard-grid');
+
+            DEFAULT_LAYOUT.forEach(item => {
+                grid.addWidget({
+                    id: item.id,
+                    x: item.x,
+                    y: item.y,
+                    w: item.w,
+                    h: item.h,
+                    minW: item.minW || 4,
+                    minH: item.minH || 2,
+                    content: getWidgetContent(item.id)
+                });
+            });
+
+            document.querySelector('main').classList.add('layout-locked');
+
+            // Generate fake chart data
+            const chartOpts = {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                layout: { padding: { top: 0, bottom: 5 } },
+                scales: {
+                    x: { display: false },
+                    y: { beginAtZero: true, ticks: { color: '#555', font: { size: 10 } }, grid: { color: '#1f1f1f' } }
+                },
+                plugins: { legend: { display: false } }
+            };
+
+            // Generate realistic-looking data
+            function genData(base, variance, count) {
+                const data = [];
+                let val = base;
+                for (let i = 0; i < count; i++) {
+                    val += (Math.random() - 0.5) * variance;
+                    val = Math.max(base - variance * 2, Math.min(base + variance * 2, val));
+                    data.push(Math.round(val * 10) / 10);
+                }
+                return data;
+            }
+
+            const labels = Array.from({ length: 60 }, (_, i) => i);
+
+            new Chart(document.getElementById('chart-cpu'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'System', data: genData(24, 5, 60), borderColor: '#c9a227', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 },
+                        { label: 'Server', data: genData(78, 8, 60), borderColor: '#4caf50', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 }
+                    ]
+                },
+                options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, max: 100 } } }
+            });
+
+            new Chart(document.getElementById('chart-ram'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'System', data: genData(12.8, 0.3, 60), borderColor: '#c9a227', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 },
+                        { label: 'Server', data: genData(4.3, 0.2, 60), borderColor: '#4caf50', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 }
+                    ]
+                },
+                options: chartOpts
+            });
+        });
+    </script>
+</body>
+</html>

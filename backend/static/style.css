@@ -225,7 +225,7 @@ main {
 /* Control Buttons */
 .controls {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 0.75rem;
     align-content: center;
     height: 100%;
@@ -300,6 +300,9 @@ main {
 .btn-stop { background: var(--red); color: #fff; }
 .btn-restart { background: var(--accent-dim); color: var(--accent-bright); }
 .btn-kill { background: var(--purple); color: #fff; }
+.btn-backup { background: #1a3040; color: #6ba3d4; border: 1px solid #2a4a5a; }
+.btn-backup:hover { background: #224060; }
+.btn-backup:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-primary { background: var(--accent); color: #000; width: 100%; font-weight: 700; }
 .btn-sm { padding: 0.25rem 0.6rem; font-size: 0.7rem; background: var(--border-light); color: var(--text-dim); border-radius: 4px; }
 

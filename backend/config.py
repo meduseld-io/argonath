@@ -102,6 +102,14 @@ CRITICAL_DISK = 95
 # Idle shutdown (0 to disable)
 IDLE_SHUTDOWN_MINUTES = int(os.environ.get("IDLE_SHUTDOWN_MINUTES", "0"))
 
+# ================= BACKUP SETTINGS =================
+_backup = _config.get("backup", {})
+
+BACKUP_ENABLED = _backup.get("enabled", True)
+BACKUP_DIR = os.path.join(DATA_DIR, "backups")
+BACKUP_SOURCE = _backup.get("save_dir", os.path.join(GAME_DIR, "Saved"))
+BACKUP_MAX_KEEP = _backup.get("max_keep", 5)
+
 # ================= INTERNAL PATHS =================
 DATABASE_PATH = os.path.join(DATA_DIR, "argonath.db")
 LOG_FILE_PATH = os.path.join(DATA_DIR, "argonath.log")

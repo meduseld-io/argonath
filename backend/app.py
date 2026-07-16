@@ -7,10 +7,12 @@ import os
 import time
 import threading
 import logging
+import tarfile
+import glob
 from logging.handlers import RotatingFileHandler
-from datetime import timedelta
+from datetime import datetime, timedelta
 
-from flask import Flask, render_template, jsonify, request, session, redirect, url_for
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for, send_file
 
 from config import (
     FLASK_HOST,
@@ -33,6 +35,10 @@ from config import (
     RATE_LIMIT_MAX_REQUESTS,
     SERVER_ARGS,
     PROCESS_NAME,
+    BACKUP_ENABLED,
+    BACKUP_DIR,
+    BACKUP_SOURCE,
+    BACKUP_MAX_KEEP,
 )
 
 # Configure logging
@@ -345,6 +351,101 @@ def api_kill():
 
     threading.Thread(target=kill_sequence, daemon=True).start()
     return "", 204
+
+
+# ================= API: BACKUP =================
+
+_backup_in_progress = False
+
+
+@app.route("/api/backup", methods=["POST"])
+@require_auth
+def api_backup():
+    global _backup_in_progress
+
+    if not BACKUP_ENABLED:
+        return jsonify({"error": "Backup is not enabled"}), 400
+
+    user = get_current_user()
+    if user and user["role"] == "viewer":
+        return jsonify({"error": "Insufficient permissions"}), 403
+
+    if _backup_in_progress:
+        return jsonify({"error": "Backup already in progress"}), 409
+
+    if not os.path.isdir(BACKUP_SOURCE):
+        return jsonify({"error": f"Save directory not found: {BACKUP_SOURCE}"}), 400
+
+    _backup_in_progress = True
+
+    def run_backup():
+        global _backup_in_progress
+        try:
+            os.makedirs(BACKUP_DIR, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{GAME_NAME.lower().replace(' ', '_')}_backup_{timestamp}.tar.gz"
+            filepath = os.path.join(BACKUP_DIR, filename)
+
+            with tarfile.open(filepath, "w:gz") as tar:
+                tar.add(BACKUP_SOURCE, arcname=os.path.basename(BACKUP_SOURCE))
+
+            logger.info(f"Backup created: {filename}")
+            db_log_activity(user["id"] if user else None, f"BACKUP created: {filename}")
+
+            # Cleanup old backups (keep max)
+            backups = sorted(glob.glob(os.path.join(BACKUP_DIR, "*.tar.gz")))
+            while len(backups) > BACKUP_MAX_KEEP:
+                old = backups.pop(0)
+                os.remove(old)
+                logger.info(f"Removed old backup: {os.path.basename(old)}")
+
+        except Exception as e:
+            logger.error("Backup failed: %s", e)
+        finally:
+            _backup_in_progress = False
+
+    threading.Thread(target=run_backup, daemon=True).start()
+    return jsonify({"status": "started"}), 202
+
+
+@app.route("/api/backup/status")
+@require_auth
+def api_backup_status():
+    if not BACKUP_ENABLED:
+        return jsonify({"enabled": False})
+
+    backups = sorted(glob.glob(os.path.join(BACKUP_DIR, "*.tar.gz")), reverse=True)
+    backup_list = []
+    for b in backups[:10]:
+        stat = os.stat(b)
+        backup_list.append({
+            "filename": os.path.basename(b),
+            "size_mb": round(stat.st_size / (1024 * 1024), 1),
+            "created": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+        })
+
+    return jsonify({
+        "enabled": True,
+        "in_progress": _backup_in_progress,
+        "backups": backup_list,
+    })
+
+
+@app.route("/api/backup/download/<filename>")
+@require_auth
+def api_backup_download(filename):
+    if not BACKUP_ENABLED:
+        return jsonify({"error": "Backup is not enabled"}), 400
+
+    # Prevent path traversal
+    if "/" in filename or "\\" in filename or ".." in filename:
+        return jsonify({"error": "Invalid filename"}), 400
+
+    filepath = os.path.join(BACKUP_DIR, filename)
+    if not os.path.isfile(filepath):
+        return jsonify({"error": "Backup not found"}), 404
+
+    return send_file(filepath, as_attachment=True)
 
 
 # ================= API: STATS =================

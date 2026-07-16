@@ -2,7 +2,7 @@
 
 # Argonath
 
-A lightweight, single-game server management panel with a clean web UI - packaged as a Docker image.
+A lightweight, open-source game server management panel with a clean web UI - packaged as a Docker image. Free to use, modify, and distribute under the [MIT license](LICENSE).
 
 Fills the gap between [Pterodactyl](https://pterodactyl.io/) (multi-server, multi-game) and [LinuxGSM](https://linuxgsm.com/) (CLI-based). Argonath is for when you just want a single Docker container with a web UI to manage one dedicated server.
 
@@ -199,4 +199,4 @@ docker container
 
 ## License
 
-MIT
+MIT - free to use, modify, and distribute. See [LICENSE](LICENSE) for details.
