@@ -16,6 +16,7 @@ Fills the gap between [Pterodactyl](https://pterodactyl.io/) (multi-server, mult
 - **Activity log** - Tracks who did what and when
 - **Update detection** - SteamCMD build ID checking, one-click update on restart
 - **Health monitoring** - Server state detection (running/offline/crashed)
+- **Save backups** - One-click backup of game saves to timestamped .tar.gz archives with auto-cleanup
 - **Customisable dashboard** - Drag, drop, and resize any widget. Layout saved per user.
 - **Colour themes** - Pick from preset accent colours or use a custom colour picker. Background customisable too.
 - **Mobile responsive** - Automatically stacks to single-column on small screens
@@ -60,6 +61,11 @@ steamcmd:
   enabled: true
   install_dir: "/game"
   validate: true
+
+backup:
+  enabled: true
+  save_dir: "/game/Saved"
+  max_keep: 5
 
 compatibility:
   wine: false
@@ -180,6 +186,9 @@ All preferences are saved to your browser's localStorage and persist across sess
 | `/api/stop` | POST | Stop server |
 | `/api/restart` | POST | Restart (with update) |
 | `/api/kill` | POST | Force kill |
+| `/api/backup` | POST | Create a backup of the save directory |
+| `/api/backup/status` | GET | Backup progress and list of archives |
+| `/api/backup/download/<file>` | GET | Download a specific backup |
 | `/api/check-update` | GET | Check for Steam updates |
 
 ## Architecture
@@ -194,7 +203,7 @@ docker container
 └── volumes
     ├── /game    → game server files
     ├── /config  → game.yml
-    └── /data    → SQLite DB, logs
+    └── /data    → SQLite DB, logs, backups
 ```
 
 ## License
