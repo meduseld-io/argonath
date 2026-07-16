@@ -61,12 +61,12 @@
                     return `
                         <div class="widget-header"><h3>System Status</h3></div>
                         <section class="status-cards">
-                            <div class="card"><div class="card-label">System CPU</div><div class="card-value">23.4%</div></div>
-                            <div class="card"><div class="card-label">CPU Temp</div><div class="card-value temp-ok">47°C</div></div>
-                            <div class="card"><div class="card-label">System RAM</div><div class="card-value">12.8 / 32.0 GB</div></div>
-                            <div class="card"><div class="card-label">Disk</div><div class="card-value">234 / 931 GB</div></div>
-                            <div class="card"><div class="card-label">Server CPU</div><div class="card-value">78.2%</div></div>
-                            <div class="card"><div class="card-label">Server RAM</div><div class="card-value">4.31 GB</div></div>
+                            <div class="card"><div class="card-label">System CPU</div><div class="card-value">31.7%</div></div>
+                            <div class="card"><div class="card-label">CPU Temp</div><div class="card-value temp-ok">52°C</div></div>
+                            <div class="card"><div class="card-label">System RAM</div><div class="card-value">14.2 / 32.0 GB</div></div>
+                            <div class="card"><div class="card-label">Disk</div><div class="card-value">247 / 931 GB</div></div>
+                            <div class="card"><div class="card-label">Server CPU</div><div class="card-value">72.6%</div></div>
+                            <div class="card"><div class="card-label">Server RAM</div><div class="card-value">4.58 GB</div></div>
                         </section>`;
                 case 'server-info':
                     return `
@@ -74,10 +74,10 @@
                         <section class="server-info">
                             <div class="info-row"><span>State:</span><span class="badge state-running">Running</span></div>
                             <div class="info-row"><span>Players:</span><span style="color:var(--green-bright)">4 / 10</span></div>
-                            <div class="info-row"><span>Uptime:</span><span>2d 14h 37m 12s</span></div>
+                            <div class="info-row"><span>Uptime:</span><span>1d 8h 52m 44s</span></div>
                             <div class="info-row"><span>Health:</span><span class="badge health-good">good</span></div>
-                            <div class="info-row"><span>Build:</span><span>14532091</span></div>
-                            <div class="info-row"><span>Last Restart:</span><span>Jul 12, 11:23 PM</span></div>
+                            <div class="info-row"><span>Build:</span><span>15891024</span></div>
+                            <div class="info-row"><span>Last Restart:</span><span>Jul 15, 3:41 AM</span></div>
                         </section>`;
                 case 'controls':
                     return `
@@ -87,6 +87,7 @@
                             <button class="btn btn-stop">Stop</button>
                             <button class="btn btn-restart">Restart</button>
                             <button class="btn btn-kill">Kill</button>
+                            <button class="btn btn-backup">Backup</button>
                         </section>`;
                 case 'quick-info':
                     return `
@@ -109,48 +110,48 @@
                     return `
                         <div class="widget-header"><h3>Server Logs</h3></div>
                         <section class="logs-section">
-                            <div class="log-viewer"><pre>07/15/2026 14:23:01: Connections 4 ZDOS:34521 sent:412 recv:1089
-07/15/2026 14:23:06: Connections 4 ZDOS:34523 sent:418 recv:1102
-07/15/2026 14:22:51: Got character ZDOID from Thorin : 1587430921:1
-07/15/2026 14:22:48: Got character ZDOID from Gandalf : 2938471023:3
-07/15/2026 14:22:31: Connections 4 ZDOS:34518 sent:398 recv:1076
-07/15/2026 14:22:26: Connections 4 ZDOS:34516 sent:392 recv:1058
-07/15/2026 14:22:21: Connections 4 ZDOS:34514 sent:387 recv:1043
-07/15/2026 14:21:58: RPC_PeerInfo from Legolas
-07/15/2026 14:21:55: Got handshake from client 76561198045267
-07/15/2026 14:21:12: Connections 3 ZDOS:34501 sent:356 recv:987
-07/15/2026 14:20:44: World saved ( 23.418s )
-07/15/2026 14:20:06: Connections 3 ZDOS:34489 sent:341 recv:962
-07/15/2026 14:19:31: Connections 3 ZDOS:34478 sent:328 recv:941</pre></div>
+                            <div class="log-viewer"><pre>07/16/2026 12:34:18: Connections 4 ZDOS:41283 sent:512 recv:1247
+07/16/2026 12:34:13: Connections 4 ZDOS:41281 sent:508 recv:1231
+07/16/2026 12:33:59: Got character ZDOID from Thorin : 1587430921:1
+07/16/2026 12:33:55: Got character ZDOID from Gandalf : 2938471023:3
+07/16/2026 12:33:42: Connections 4 ZDOS:41276 sent:496 recv:1198
+07/16/2026 12:33:37: Connections 4 ZDOS:41274 sent:491 recv:1182
+07/16/2026 12:33:31: Connections 4 ZDOS:41272 sent:487 recv:1169
+07/16/2026 12:33:08: RPC_PeerInfo from Legolas
+07/16/2026 12:33:05: Got handshake from client 76561198045267
+07/16/2026 12:32:44: Connections 3 ZDOS:41259 sent:462 recv:1103
+07/16/2026 12:32:12: World saved ( 21.847s )
+07/16/2026 12:31:38: Connections 3 ZDOS:41247 sent:448 recv:1078
+07/16/2026 12:31:01: Connections 3 ZDOS:41235 sent:435 recv:1054</pre></div>
                         </section>`;
                 case 'startup-logs':
                     return `
                         <div class="widget-header"><h3>Startup Logs</h3></div>
                         <section class="logs-section">
-                            <div class="log-viewer"><pre>[2026-07-12 23:23:01] ✓ Server started successfully
-[2026-07-12 23:23:01] Valheim dedicated server started on port 2456
-[2026-07-12 23:22:58] DungeonDB Start 852
-[2026-07-12 23:22:57] Loading 127 location zones
-[2026-07-12 23:22:55] Initializing world "Midgard" (seed: meduseld2026)
-[2026-07-12 23:22:52] SteamCMD update complete - build 14532091
-[2026-07-12 23:22:34] Checking for updates via SteamCMD...
-[2026-07-12 23:22:33] Starting Valheim dedicated server...
-[2026-07-12 23:22:33] ──── SERVER START ────</pre></div>
+                            <div class="log-viewer"><pre>[2026-07-15 03:41:28] ✓ Server started successfully
+[2026-07-15 03:41:28] Valheim dedicated server started on port 2456
+[2026-07-15 03:41:25] DungeonDB Start 852
+[2026-07-15 03:41:24] Loading 127 location zones
+[2026-07-15 03:41:22] Initializing world "Midgard" (seed: meduseld2026)
+[2026-07-15 03:41:18] SteamCMD update complete - build 15891024
+[2026-07-15 03:41:02] Checking for updates via SteamCMD...
+[2026-07-15 03:41:01] Starting Valheim dedicated server...
+[2026-07-15 03:41:01] ──── SERVER START ────</pre></div>
                         </section>`;
                 case 'activity':
                     return `
                         <div class="widget-header"><h3>Activity Log</h3></div>
                         <section class="logs-section">
                             <div class="activity-list">
-                                <div class="activity-item"><span class="activity-time">Jul 15, 2:21 PM</span><span class="activity-user">System</span><span class="activity-action">Player joined: Legolas</span></div>
-                                <div class="activity-item"><span class="activity-time">Jul 15, 12:44 PM</span><span class="activity-user">System</span><span class="activity-action">Player joined: Gandalf</span></div>
-                                <div class="activity-item"><span class="activity-time">Jul 15, 10:08 AM</span><span class="activity-user">System</span><span class="activity-action">Player joined: Thorin</span></div>
-                                <div class="activity-item"><span class="activity-time">Jul 14, 9:12 PM</span><span class="activity-user">admin</span><span class="activity-action">Server restarted</span></div>
-                                <div class="activity-item"><span class="activity-time">Jul 14, 6:30 PM</span><span class="activity-user">System</span><span class="activity-action">Player left: Bilbo</span></div>
-                                <div class="activity-item"><span class="activity-time">Jul 14, 2:15 PM</span><span class="activity-user">System</span><span class="activity-action">Player joined: Bilbo</span></div>
-                                <div class="activity-item"><span class="activity-time">Jul 13, 11:45 PM</span><span class="activity-user">admin</span><span class="activity-action">Server started</span></div>
-                                <div class="activity-item"><span class="activity-time">Jul 13, 11:44 PM</span><span class="activity-user">admin</span><span class="activity-action">Server stopped</span></div>
-                                <div class="activity-item"><span class="activity-time">Jul 12, 11:23 PM</span><span class="activity-user">admin</span><span class="activity-action">Server started</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 16, 12:33 PM</span><span class="activity-user">System</span><span class="activity-action">Player joined: Legolas</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 16, 10:15 AM</span><span class="activity-user">System</span><span class="activity-action">Player joined: Gandalf</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 16, 8:42 AM</span><span class="activity-user">System</span><span class="activity-action">Player joined: Thorin</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 15, 11:30 PM</span><span class="activity-user">System</span><span class="activity-action">Player left: Bilbo</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 15, 7:18 PM</span><span class="activity-user">System</span><span class="activity-action">Player joined: Bilbo</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 15, 4:05 PM</span><span class="activity-user">System</span><span class="activity-action">Backup completed</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 15, 4:05 PM</span><span class="activity-user">admin</span><span class="activity-action">Backup started</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 15, 3:41 AM</span><span class="activity-user">admin</span><span class="activity-action">Server started</span></div>
+                                <div class="activity-item"><span class="activity-time">Jul 15, 3:40 AM</span><span class="activity-user">admin</span><span class="activity-action">Server stopped</span></div>
                             </div>
                         </section>`;
                 default:
@@ -216,8 +217,8 @@
                 data: {
                     labels,
                     datasets: [
-                        { label: 'System', data: genData(24, 5, 60), borderColor: '#c9a227', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 },
-                        { label: 'Server', data: genData(78, 8, 60), borderColor: '#4caf50', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 }
+                        { label: 'System', data: genData(32, 6, 60), borderColor: '#c9a227', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 },
+                        { label: 'Server', data: genData(73, 7, 60), borderColor: '#4caf50', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 }
                     ]
                 },
                 options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, max: 100 } } }
@@ -228,8 +229,8 @@
                 data: {
                     labels,
                     datasets: [
-                        { label: 'System', data: genData(12.8, 0.3, 60), borderColor: '#c9a227', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 },
-                        { label: 'Server', data: genData(4.3, 0.2, 60), borderColor: '#4caf50', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 }
+                        { label: 'System', data: genData(14.2, 0.4, 60), borderColor: '#c9a227', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 },
+                        { label: 'Server', data: genData(4.6, 0.2, 60), borderColor: '#4caf50', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 }
                     ]
                 },
                 options: chartOpts
