@@ -888,3 +888,44 @@ main {
     background: var(--border-light);
     border-radius: 3px;
 }
+
+/* ================= DEPLOY SECTION ================= */
+
+.deploy-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+}
+
+.deploy-message p {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    margin-bottom: 0.75rem;
+}
+
+.deploy-progress {
+    width: 100%;
+}
+
+.deploy-progress p {
+    color: var(--accent-bright);
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.deploy-progress pre {
+    background: #0a0a0a;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.5rem;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    max-height: 80px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    text-align: left;
+}

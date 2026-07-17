@@ -103,6 +103,7 @@
         const STEAM_APP_ID = '{{ steam_app_id }}';
         const PROCESS_NAME = '{{ process_name }}';
         const SERVER_ARGS = {{ server_args | tojson }};
+        let isDeployed = true; // assume true until first stats fetch
         const GAME_PORT = (function() {
             for (let i = 0; i < SERVER_ARGS.length; i++) {
                 const a = SERVER_ARGS[i];
@@ -164,12 +165,22 @@
                 case 'controls':
                     return `
                         <div class="widget-header"><h3>Controls</h3><span class="drag-handle">&#9776;</span></div>
-                        <section class="controls">
+                        <section class="controls" id="controls-section">
                             <button class="btn btn-start" id="btn-start" onclick="serverAction('start')">Start</button>
                             <button class="btn btn-stop" id="btn-stop" onclick="serverAction('stop')">Stop</button>
                             <button class="btn btn-restart" id="btn-restart" onclick="serverAction('restart')">Restart</button>
                             <button class="btn btn-kill" id="btn-kill" onclick="serverAction('kill')">Kill</button>
                             <button class="btn btn-backup" id="btn-backup" onclick="backupAction()">Backup</button>
+                        </section>
+                        <section class="controls deploy-section" id="deploy-section" style="display:none">
+                            <div class="deploy-message">
+                                <p>Game server files are not installed yet.</p>
+                                <button class="btn btn-start" id="btn-deploy" onclick="deployAction()">Deploy Server</button>
+                            </div>
+                            <div class="deploy-progress" id="deploy-progress" style="display:none">
+                                <p>Downloading server files...</p>
+                                <pre id="deploy-output">Starting...</pre>
+                            </div>
                         </section>`;
                 case 'quick-info':
                     return `
@@ -626,6 +637,7 @@
 
                 // Button states
                 updateButtons(data.state);
+                updateDeployState(data.deployed);
                 lastState = data.state;
             } catch (e) {
                 console.error('Failed to fetch stats:', e);
@@ -642,6 +654,78 @@
             if (stop) stop.disabled = !['running'].includes(state);
             if (restart) restart.disabled = !['running'].includes(state);
             if (kill) kill.disabled = !['running', 'restarting'].includes(state);
+        }
+
+        function updateDeployState(deployed) {
+            const controlsSection = document.getElementById('controls-section');
+            const deploySection = document.getElementById('deploy-section');
+            if (!controlsSection || !deploySection) return;
+
+            if (deployed === false && !isDeployed) {
+                controlsSection.style.display = 'none';
+                deploySection.style.display = '';
+            } else if (deployed !== false) {
+                controlsSection.style.display = '';
+                deploySection.style.display = 'none';
+                isDeployed = true;
+            }
+
+            if (deployed === false) {
+                isDeployed = false;
+            }
+        }
+
+        let _deployPollInterval = null;
+
+        async function deployAction() {
+            const btn = document.getElementById('btn-deploy');
+            const progress = document.getElementById('deploy-progress');
+            try {
+                btn.disabled = true;
+                btn.textContent = 'Deploying...';
+                const res = await fetch('/api/deploy', { method: 'POST' });
+                if (!res.ok) {
+                    const data = await res.json();
+                    showToast('Error: ' + (data.error || 'Deploy failed'), 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Deploy Server';
+                    return;
+                }
+                showToast('Deploy started - downloading server files...', 'info');
+                if (progress) progress.style.display = '';
+                btn.style.display = 'none';
+
+                // Poll deploy status
+                _deployPollInterval = setInterval(async () => {
+                    try {
+                        const statusRes = await fetch('/api/deploy/status');
+                        const status = await statusRes.json();
+                        const outputEl = document.getElementById('deploy-output');
+                        if (outputEl) outputEl.textContent = status.output || 'Working...';
+
+                        if (status.status === 'complete') {
+                            clearInterval(_deployPollInterval);
+                            showToast('Deploy complete! Server files installed.', 'success');
+                            isDeployed = true;
+                            setTimeout(fetchStats, 1000);
+                        } else if (status.status.startsWith('failed')) {
+                            clearInterval(_deployPollInterval);
+                            showToast('Deploy failed: ' + status.status, 'error');
+                            btn.style.display = '';
+                            btn.disabled = false;
+                            btn.textContent = 'Deploy Server';
+                            if (progress) progress.style.display = 'none';
+                        }
+                    } catch (e) {
+                        console.error('Deploy status poll failed:', e);
+                    }
+                }, 2000);
+            } catch (e) {
+                console.error('Deploy action failed:', e);
+                showToast('Failed to start deploy', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Deploy Server';
+            }
         }
 
         function formatUptime(seconds) {

@@ -64,6 +64,7 @@ from process_manager import (
 )
 from stats import get_system_stats, get_health, get_history, collect_loop
 from updates import check_for_updates, run_update, get_update_info, check_updates_loop
+from deploy import is_deployed, start_deploy, get_deploy_status
 
 # Flask app
 app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -452,6 +453,39 @@ def api_backup_download(filename):
     return send_file(filepath, as_attachment=True)
 
 
+# ================= API: DEPLOY =================
+
+
+@app.route("/api/deploy", methods=["POST"])
+@require_auth
+def api_deploy():
+    user = get_current_user()
+    if user and user["role"] == "viewer":
+        return jsonify({"error": "Insufficient permissions"}), 403
+
+    if is_deployed():
+        return jsonify({"error": "Server is already deployed"}), 400
+
+    if is_running():
+        return jsonify({"error": "Cannot deploy while server is running"}), 400
+
+    if not STEAMCMD_ENABLED:
+        return jsonify({"error": "SteamCMD is not enabled in config"}), 400
+
+    success = start_deploy()
+    if not success:
+        return jsonify({"error": "Deploy already in progress"}), 409
+
+    db_log_activity(user["id"] if user else None, "DEPLOY server files")
+    return jsonify({"status": "started"}), 202
+
+
+@app.route("/api/deploy/status")
+@require_auth
+def api_deploy_status():
+    return jsonify(get_deploy_status())
+
+
 # ================= API: STATS =================
 
 
@@ -472,6 +506,7 @@ def api_stats():
             "health": get_health(stats),
             "version": update_info,
             "players": get_player_count() if running else None,
+            "deployed": is_deployed(),
         })
     except Exception as e:
         logger.error(f"Error in /api/stats: {e}")
