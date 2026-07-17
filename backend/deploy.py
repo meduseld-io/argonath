@@ -9,6 +9,8 @@ import threading
 import time
 import logging
 
+import re
+
 from config import (
     STEAM_APP_ID,
     STEAMCMD_ENABLED,
@@ -97,8 +99,11 @@ def _run_deploy():
         )
 
         lines = []
+        _ansi_re = re.compile(r'\x1b\[[0-9;]*m')
         for line in iter(process.stdout.readline, ""):
-            lines.append(line.rstrip())
+            clean = _ansi_re.sub('', line.rstrip())
+            if clean:
+                lines.append(clean)
             _deploy_line_count = len(lines)
             # Keep last 50 lines in output
             _deploy_output = "\n".join(lines[-50:])
