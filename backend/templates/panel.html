@@ -612,8 +612,13 @@
                 // Health
                 const healthEl = document.getElementById('health');
                 if (healthEl) {
-                    healthEl.textContent = data.health || '--';
-                    healthEl.className = 'badge health-' + (data.health || 'unknown');
+                    if (data.state === 'running') {
+                        healthEl.textContent = data.health || '--';
+                        healthEl.className = 'badge health-' + (data.health || 'unknown');
+                    } else {
+                        healthEl.textContent = '--';
+                        healthEl.className = 'badge';
+                    }
                 }
 
                 // Build info
