@@ -4,6 +4,7 @@ Handles starting, stopping, killing, and monitoring the game server process.
 """
 
 import os
+import socket
 import subprocess
 import time
 import threading
@@ -18,6 +19,7 @@ from config import (
     SERVER_DIR,
     SERVER_ARGS,
     LOG_FILE,
+    QUERY_PORT,
     START_TIMEOUT,
     STOP_TIMEOUT,
     MONITOR_INTERVAL,
@@ -279,39 +281,197 @@ def write_startup_marker(message):
 
 def get_player_count():
     """
-    Get current player count. Returns int or None if unavailable.
-    This is a best-effort implementation that tries common patterns:
-    - Reads the game log file and looks for player join/leave messages
-    - Falls back to None if the game doesn't have a recognizable pattern
+    Get current player count. Tries A2S Steam query first, then falls back
+    to parsing join/leave messages from the game server log.
+    Returns int or None if unavailable.
+    """
+    # Try A2S protocol first (works for most Steam-based dedicated servers)
+    count = _get_player_count_a2s()
+    if count is not None:
+        return count
 
-    Override this function or extend it for game-specific player counting.
+    # Fall back to log-based counting
+    count = _get_player_count_from_logs()
+    return count
+
+
+def _get_player_count_a2s():
+    """Query Steam server for player count using A2S_INFO protocol."""
+    try:
+        query_host = "127.0.0.1"
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.settimeout(2)
+
+        request = b"\xff\xff\xff\xff\x54Source Engine Query\x00"
+        sock.sendto(request, (query_host, QUERY_PORT))
+        data, addr = sock.recvfrom(4096)
+        sock.close()
+
+        if len(data) < 6:
+            return None
+
+        response_type = data[4]
+
+        # Handle challenge response (0x41)
+        if response_type == 0x41:
+            if len(data) < 9:
+                return None
+            challenge = data[5:9]
+            challenge_request = b"\xff\xff\xff\xff\x54Source Engine Query\x00" + challenge
+            sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock2.settimeout(2)
+            sock2.sendto(challenge_request, (query_host, QUERY_PORT))
+            data, addr = sock2.recvfrom(4096)
+            sock2.close()
+
+            if len(data) < 6:
+                return None
+            response_type = data[4]
+
+        # Expect A2S_INFO response (0x49)
+        if response_type != 0x49:
+            return None
+
+        offset = 6
+
+        # Skip null-terminated strings: server name, map, folder, game
+        for _ in range(4):
+            while offset < len(data) and data[offset] != 0:
+                offset += 1
+            offset += 1
+
+        # Skip app ID (2 bytes)
+        offset += 2
+
+        # Read player count (1 byte)
+        if offset < len(data):
+            players = data[offset]
+            logger.debug(f"A2S query: {players} players online")
+            return players
+
+        return None
+
+    except socket.timeout:
+        logger.debug("A2S query timeout - server may not respond to queries")
+        return None
+    except Exception as e:
+        logger.debug(f"A2S query error: {e}")
+        return None
+
+
+def _get_player_count_from_logs():
+    """
+    Count players by parsing join/leave messages from the game server log.
+    Supports common patterns across many game servers:
+    - "NAME joined the server" / "NAME left the server" (Palworld, etc.)
+    - "NAME connected" / "NAME disconnected" (Source-based)
+    - "NAME logged in" / "NAME logged out" (Minecraft-style)
+    Returns int or None if no recognizable pattern found.
     """
     if not LOG_FILE or not os.path.exists(LOG_FILE):
         return None
 
     try:
-        # Try to count connected players from log patterns
-        # Common patterns across games:
-        # - "player connected" / "player disconnected"
-        # - "joined the game" / "left the game"
-        # - Active connection count from recent log lines
-        with open(LOG_FILE, "r", encoding="utf-8", errors="ignore") as f:
-            lines = f.readlines()[-500:]
+        # Read the last 256KB of the log file efficiently
+        chunk_size = 256 * 1024
+        with open(LOG_FILE, "rb") as f:
+            f.seek(0, 2)
+            file_size = f.tell()
+            read_start = max(0, file_size - chunk_size)
+            f.seek(read_start)
+            data = f.read()
 
-        connected = set()
+        text = data.decode("utf-8", errors="ignore")
+        lines = text.splitlines()
+
+        # Track players by name using join/leave patterns
+        online_players = set()
+        found_pattern = False
+
         for line in lines:
             lower = line.lower()
-            # Generic patterns - covers many Source/Unity games
-            if "connected" in lower or "joined" in lower or "logged in" in lower:
-                connected.add(line.strip())
-            if "disconnected" in lower or "left" in lower or "logged out" in lower:
-                connected.discard(line.strip())
 
-        # If we found no join/leave patterns, return None (unknown)
-        # This avoids showing "0" when we simply can't detect players
-        return None
+            # Pattern: "NAME joined the server" / "NAME left the server"
+            if "joined the server" in lower:
+                found_pattern = True
+                name = _extract_player_name(line, "joined the server")
+                if name:
+                    online_players.add(name)
+            elif "left the server" in lower:
+                found_pattern = True
+                name = _extract_player_name(line, "left the server")
+                if name:
+                    online_players.discard(name)
+
+            # Pattern: "NAME connected" / "NAME disconnected"
+            elif "player connected" in lower or "] connected" in lower:
+                found_pattern = True
+                name = _extract_player_name(line, "connected")
+                if name:
+                    online_players.add(name)
+            elif "player disconnected" in lower or "] disconnected" in lower:
+                found_pattern = True
+                name = _extract_player_name(line, "disconnected")
+                if name:
+                    online_players.discard(name)
+
+            # Pattern: "NAME logged in" / "NAME logged out"
+            elif "logged in" in lower:
+                found_pattern = True
+                name = _extract_player_name(line, "logged in")
+                if name:
+                    online_players.add(name)
+            elif "logged out" in lower:
+                found_pattern = True
+                name = _extract_player_name(line, "logged out")
+                if name:
+                    online_players.discard(name)
+
+        # If no join/leave patterns were found at all, return None (unknown)
+        if not found_pattern:
+            return None
+
+        return len(online_players)
+
     except Exception as e:
-        logger.debug(f"Player count detection failed: {e}")
+        logger.debug(f"Log-based player count failed: {e}")
+        return None
+
+
+def _extract_player_name(line, keyword):
+    """
+    Extract player name from a log line containing the given keyword.
+    Handles common log formats:
+    - [timestamp] [TAG] NAME keyword...
+    - [timestamp] NAME keyword...
+    - NAME keyword...
+    """
+    try:
+        lower = line.lower()
+        idx = lower.index(keyword.lower())
+        # Get the text before the keyword
+        prefix = line[:idx].strip()
+
+        # Strip common log prefixes: [timestamp] [TAG]
+        # Remove bracketed sections from the left
+        while prefix.startswith("["):
+            end = prefix.find("]")
+            if end == -1:
+                break
+            prefix = prefix[end + 1:].strip()
+
+        # Some formats have "LOG]" or similar without leading bracket
+        # e.g. "[2026-07-17 17:11:00] [LOG] stewart joined..."
+        # After stripping brackets, we should have just the player name
+        name = prefix.strip()
+
+        # Skip if it looks like a system message or is empty
+        if not name or len(name) > 64 or " " in name and len(name) > 32:
+            return None
+
+        return name
+    except Exception:
         return None
 
 

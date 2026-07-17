@@ -51,6 +51,7 @@ LAUNCH_EXE = _game.get("launch_exe", "")
 SERVER_DIR = _game.get("server_dir", GAME_DIR)
 LOG_FILE = _game.get("log_file", "")
 MAX_PLAYERS = _game.get("max_players", 8)
+QUERY_PORT = int(_game.get("query_port", 27015))
 SERVER_ARGS = _game.get("args", [])
 
 # ================= SERVER SETTINGS =================

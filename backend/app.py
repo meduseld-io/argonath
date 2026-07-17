@@ -517,9 +517,29 @@ def api_logs():
         return jsonify({"lines": []})
 
     try:
-        with open(LOG_FILE, "r", encoding="utf-8", errors="ignore") as f:
-            lines = f.readlines()[-200:]
-        return jsonify({"lines": [l.rstrip("\n") for l in lines]})
+        # Tail-like read to avoid loading entire log into memory
+        chunk_size = 64 * 1024
+        lines_wanted = 200
+
+        with open(LOG_FILE, "rb") as f:
+            f.seek(0, 2)
+            file_size = f.tell()
+            if file_size == 0:
+                return jsonify({"lines": []})
+
+            collected = b""
+            position = file_size
+            while position > 0:
+                read_size = min(chunk_size, position)
+                position -= read_size
+                f.seek(position)
+                collected = f.read(read_size) + collected
+                if collected.count(b"\n") >= lines_wanted + 1:
+                    break
+
+        text = collected.decode("utf-8", errors="ignore")
+        lines = text.splitlines()[-lines_wanted:]
+        return jsonify({"lines": lines})
     except Exception as e:
         logger.error(f"Error reading log file: {e}")
         return jsonify({"lines": [], "error": str(e)})
