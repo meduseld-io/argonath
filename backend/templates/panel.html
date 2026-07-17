@@ -173,14 +173,9 @@
                             <button class="btn btn-backup" id="btn-backup" onclick="backupAction()">Backup</button>
                         </section>
                         <section class="controls deploy-section" id="deploy-section" style="display:none">
-                            <div class="deploy-message">
-                                <p>Game server files are not installed yet.</p>
-                                <button class="btn btn-start" id="btn-deploy" onclick="deployAction()">Deploy Server</button>
-                            </div>
-                            <div class="deploy-progress" id="deploy-progress" style="display:none">
-                                <p>Downloading server files...</p>
-                                <pre id="deploy-output">Starting...</pre>
-                            </div>
+                            <button class="btn btn-start" id="btn-deploy" onclick="deployAction()">Deploy Server</button>
+                            <span class="deploy-hint" id="deploy-hint">Server files not installed</span>
+                            <span class="deploy-status" id="deploy-status" style="display:none">Deploying...</span>
                         </section>`;
                 case 'quick-info':
                     return `
@@ -679,42 +674,44 @@
 
         async function deployAction() {
             const btn = document.getElementById('btn-deploy');
-            const progress = document.getElementById('deploy-progress');
+            const hint = document.getElementById('deploy-hint');
+            const status = document.getElementById('deploy-status');
             try {
                 btn.disabled = true;
                 btn.textContent = 'Deploying...';
+                if (hint) hint.style.display = 'none';
+                if (status) status.style.display = '';
                 const res = await fetch('/api/deploy', { method: 'POST' });
                 if (!res.ok) {
                     const data = await res.json();
                     showToast('Error: ' + (data.error || 'Deploy failed'), 'error');
                     btn.disabled = false;
                     btn.textContent = 'Deploy Server';
+                    if (hint) hint.style.display = '';
+                    if (status) status.style.display = 'none';
                     return;
                 }
                 showToast('Deploy started - downloading server files...', 'info');
-                if (progress) progress.style.display = '';
-                btn.style.display = 'none';
 
                 // Poll deploy status
                 _deployPollInterval = setInterval(async () => {
                     try {
                         const statusRes = await fetch('/api/deploy/status');
-                        const status = await statusRes.json();
-                        const outputEl = document.getElementById('deploy-output');
-                        if (outputEl) outputEl.textContent = status.output || 'Working...';
+                        const data = await statusRes.json();
+                        if (status) status.textContent = 'Deploying... (' + data.line_count + ' lines)';
 
-                        if (status.status === 'complete') {
+                        if (data.status === 'complete') {
                             clearInterval(_deployPollInterval);
                             showToast('Deploy complete! Server files installed.', 'success');
                             isDeployed = true;
                             setTimeout(fetchStats, 1000);
-                        } else if (status.status.startsWith('failed')) {
+                        } else if (data.status.startsWith('failed')) {
                             clearInterval(_deployPollInterval);
-                            showToast('Deploy failed: ' + status.status, 'error');
-                            btn.style.display = '';
+                            showToast('Deploy failed: ' + data.status, 'error');
                             btn.disabled = false;
                             btn.textContent = 'Deploy Server';
-                            if (progress) progress.style.display = 'none';
+                            if (hint) hint.style.display = '';
+                            if (status) status.style.display = 'none';
                         }
                     } catch (e) {
                         console.error('Deploy status poll failed:', e);
