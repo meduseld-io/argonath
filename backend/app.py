@@ -56,7 +56,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Import modules after logging is configured
-from models import init_db, log_activity as db_log_activity
+from models import init_db, log_activity as db_log_activity, user_count
 from auth import get_current_user, require_auth, require_admin, login, logout, register
 from process_manager import (
     get_state, set_state, is_running, launch_server, kill_server,
@@ -103,6 +103,10 @@ _last_restart_time = 0
 def login_page():
     if AUTH_MODE == "none":
         return redirect("/")
+
+    # If no users exist yet, redirect to registration
+    if user_count() == 0:
+        return redirect("/register")
 
     if request.method == "POST":
         data = request.form
