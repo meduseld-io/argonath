@@ -7,7 +7,7 @@ game:
   server_dir: "/game"
   log_file: "/game/Pal/Saved/Logs/Pal.log"
   max_players: 32
-  args: ["-port=8211", "-queryport=27015", "-useperfthreads", "-NoAsyncLoadingThread", "-UseMultithreadForDS"]
+  args: ["-port=8211", "-queryport=27015", "-log", "-useperfthreads", "-NoAsyncLoadingThread", "-UseMultithreadForDS"]
 
 server:
   port: 5000
