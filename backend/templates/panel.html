@@ -30,7 +30,7 @@
                 <span class="game-name">{{ game_name }}</span>
             </div>
             <span class="badge" id="state-badge">offline</span>
-            <span class="state-text" id="state-text">Offline</span>
+            <span class="port-status" id="port-status">● Port closed</span>
         </div>
         <div class="header-right">
             {% if auth_mode != 'none' %}
@@ -539,13 +539,6 @@
                 badge.textContent = data.state;
                 badge.className = 'badge state-' + data.state;
 
-                // State text in header
-                const headerStateText = document.getElementById('state-text');
-                if (headerStateText) {
-                    const stateLabels = { running: 'Running', offline: 'Offline', crashed: 'Crashed', starting: 'Starting', stopping: 'Stopping', restarting: 'Restarting' };
-                    headerStateText.textContent = stateLabels[data.state] || data.state;
-                }
-
                 // State text in server info
                 const stateTextEl = document.getElementById('server-state-text');
                 if (stateTextEl) {
@@ -641,6 +634,7 @@
                 // Button states
                 updateButtons(data.state);
                 updateDeployState(data.deployed);
+
                 lastState = data.state;
             } catch (e) {
                 console.error('Failed to fetch stats:', e);
@@ -921,6 +915,27 @@
             logsInterval = setInterval(() => { fetchLogs(); fetchStartupLogs(); }, 5000);
             historyInterval = setInterval(fetchHistory, 30000);
             setInterval(fetchActivity, 15000);
+
+            // Port reachability check
+            async function checkGamePort() {
+                try {
+                    const res = await fetch('/api/ping-game');
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const el = document.getElementById('port-status');
+                    if (el) {
+                        if (data.reachable) {
+                            el.innerHTML = '<span style="color: #4caf50;">● Port open</span>';
+                        } else {
+                            el.innerHTML = '<span style="color: #888;">● Port closed</span>';
+                        }
+                    }
+                } catch (e) {
+                    console.error('Port check failed:', e);
+                }
+            }
+            checkGamePort();
+            setInterval(checkGamePort, 30000);
         });
     </script>
 </body>

@@ -564,6 +564,36 @@ def api_check_update():
     return jsonify(get_update_info())
 
 
+@app.route("/api/ping-game")
+@require_auth
+def api_ping_game():
+    """Check if the game server port is reachable (UDP or TCP)"""
+    try:
+        import socket
+
+        # Extract game port from SERVER_ARGS
+        game_port = None
+        for arg in SERVER_ARGS:
+            if arg.lower().startswith('-port='):
+                game_port = int(arg.split('=')[1])
+                break
+        if not game_port:
+            game_port = 8211  # fallback
+
+        # Check if something is bound to the port using ss
+        result = subprocess.run(
+            ["ss", "-ulnp", f"sport = :{game_port}"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        listening = str(game_port) in result.stdout
+        return jsonify({"reachable": listening, "port": game_port})
+    except Exception as e:
+        logger.error(f"Error checking game port: {e}")
+        return jsonify({"reachable": False, "port": 0, "error": str(e)})
+
+
 # ================= API: HEALTH (PUBLIC) =================
 
 
