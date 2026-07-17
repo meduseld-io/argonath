@@ -656,17 +656,14 @@
             const deploySection = document.getElementById('deploy-section');
             if (!controlsSection || !deploySection) return;
 
-            if (deployed === false && !isDeployed) {
+            if (deployed === false) {
                 controlsSection.style.display = 'none';
                 deploySection.style.display = '';
-            } else if (deployed !== false) {
+                isDeployed = false;
+            } else {
                 controlsSection.style.display = '';
                 deploySection.style.display = 'none';
                 isDeployed = true;
-            }
-
-            if (deployed === false) {
-                isDeployed = false;
             }
         }
 
