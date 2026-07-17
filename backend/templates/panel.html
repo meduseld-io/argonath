@@ -30,6 +30,7 @@
                 <span class="game-name">{{ game_name }}</span>
             </div>
             <span class="badge" id="state-badge">offline</span>
+            <span class="state-text" id="state-text">Offline</span>
         </div>
         <div class="header-right">
             {% if auth_mode != 'none' %}
@@ -185,7 +186,7 @@
                             <div class="qi-row"><span class="qi-label">Process</span><span class="qi-value">${PROCESS_NAME}</span></div>
                             ${GAME_PORT ? '<div class="qi-row"><span class="qi-label">Port</span><span class="qi-value">' + GAME_PORT + '</span></div>' : ''}
                             ${QUERY_PORT ? '<div class="qi-row"><span class="qi-label">Query</span><span class="qi-value">' + QUERY_PORT + '</span></div>' : ''}
-                            <div class="qi-row"><span class="qi-label">Max Players</span><span class="qi-value">${MAX_PLAYERS}</span></div>
+                            <div class="qi-row"><span class="qi-label">Server IP</span><span class="qi-value" id="server-ip">Loading...</span></div>
                         </section>`;
                 case 'charts':
                     return `
@@ -537,6 +538,13 @@
                 const badge = document.getElementById('state-badge');
                 badge.textContent = data.state;
                 badge.className = 'badge state-' + data.state;
+
+                // State text in header
+                const headerStateText = document.getElementById('state-text');
+                if (headerStateText) {
+                    const stateLabels = { running: 'Running', offline: 'Offline', crashed: 'Crashed', starting: 'Starting', stopping: 'Stopping', restarting: 'Restarting' };
+                    headerStateText.textContent = stateLabels[data.state] || data.state;
+                }
 
                 // State text in server info
                 const stateTextEl = document.getElementById('server-state-text');
@@ -891,6 +899,14 @@
 
             // Init grid first so DOM is populated
             initGrid();
+
+            // Set server IP in config widget
+            const ipEl = document.getElementById('server-ip');
+            if (ipEl) {
+                const host = window.location.hostname;
+                const port = GAME_PORT || '—';
+                ipEl.textContent = host === 'localhost' || host === '127.0.0.1' ? 'localhost:' + port : host + ':' + port;
+            }
 
             // Then init settings (colours), charts, and start polling
             initSettings();

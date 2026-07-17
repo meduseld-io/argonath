@@ -114,6 +114,12 @@ header h1 {
     font-weight: 400;
 }
 
+.state-text {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    font-weight: 400;
+}
+
 .header-right {
     display: flex;
     align-items: center;
