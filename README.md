@@ -27,14 +27,19 @@ Fills the gap between [Pterodactyl](https://pterodactyl.io/) (multi-server, mult
 ## Quick Start
 
 ```bash
-# 1. Create directories
+# 1. Create project directory
+mkdir argonath && cd argonath
+
+# 2. Create subdirectories
 mkdir -p config game
 
-# 2. Create your config
-cp config/game.yml.example config/game.yml
+# 3. Create your config
+# Copy an example from the repo's examples/ folder into config/game.yml
 # Edit config/game.yml for your game
 
-# 3. Run
+# 4. Create docker-compose.yml (see Docker Compose section below)
+
+# 5. Run
 docker compose up -d
 ```
 
