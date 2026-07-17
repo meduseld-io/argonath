@@ -147,33 +147,39 @@ def _generate_start_script():
 
     if "palworld" in game_lower:
         exe = os.path.join(SERVER_DIR, "PalServer.sh")
+        launch_cmd = f"{exe} {args_str}" if args_str else exe
         content = (
             f"#!/bin/bash\n"
             f"cd {SERVER_DIR}\n"
             f"STARTUP_LOG=\"{SERVER_DIR}/startup.log\"\n"
             f"SERVER_LOG=\"{SERVER_DIR}/server.log\"\n"
             f"echo \"[$(date '+%Y-%m-%d %H:%M:%S')] SERVER START: Launching {GAME_NAME} server\" >> \"$STARTUP_LOG\"\n"
-            f"{exe} {args_str} 2>&1 | tee -a \"$SERVER_LOG\"\n"
+            f"tmux new-session -d -s gameserver \"{launch_cmd} 2>&1 | tee -a $SERVER_LOG\"\n"
+            f"echo \"[$(date '+%Y-%m-%d %H:%M:%S')] ✓ Server started successfully in tmux session 'gameserver'\" >> \"$STARTUP_LOG\"\n"
         )
     elif "valheim" in game_lower:
         exe = os.path.join(SERVER_DIR, "valheim_server.x86_64")
+        launch_cmd = f"{exe} {args_str}" if args_str else exe
         content = (
             f"#!/bin/bash\n"
             f"cd {SERVER_DIR}\n"
             f"STARTUP_LOG=\"{SERVER_DIR}/startup.log\"\n"
             f"SERVER_LOG=\"{SERVER_DIR}/server.log\"\n"
             f"echo \"[$(date '+%Y-%m-%d %H:%M:%S')] SERVER START: Launching {GAME_NAME} server\" >> \"$STARTUP_LOG\"\n"
-            f"{exe} {args_str} 2>&1 | tee -a \"$SERVER_LOG\"\n"
+            f"tmux new-session -d -s gameserver \"{launch_cmd} 2>&1 | tee -a $SERVER_LOG\"\n"
+            f"echo \"[$(date '+%Y-%m-%d %H:%M:%S')] ✓ Server started successfully in tmux session 'gameserver'\" >> \"$STARTUP_LOG\"\n"
         )
     elif "satisfactory" in game_lower:
         exe = os.path.join(SERVER_DIR, "FactoryServer.sh")
+        launch_cmd = f"{exe} {args_str}" if args_str else exe
         content = (
             f"#!/bin/bash\n"
             f"cd {SERVER_DIR}\n"
             f"STARTUP_LOG=\"{SERVER_DIR}/startup.log\"\n"
             f"SERVER_LOG=\"{SERVER_DIR}/server.log\"\n"
             f"echo \"[$(date '+%Y-%m-%d %H:%M:%S')] SERVER START: Launching {GAME_NAME} server\" >> \"$STARTUP_LOG\"\n"
-            f"{exe} {args_str} 2>&1 | tee -a \"$SERVER_LOG\"\n"
+            f"tmux new-session -d -s gameserver \"{launch_cmd} 2>&1 | tee -a $SERVER_LOG\"\n"
+            f"echo \"[$(date '+%Y-%m-%d %H:%M:%S')] ✓ Server started successfully in tmux session 'gameserver'\" >> \"$STARTUP_LOG\"\n"
         )
     else:
         # Generic fallback
@@ -183,9 +189,9 @@ def _generate_start_script():
             f"STARTUP_LOG=\"{SERVER_DIR}/startup.log\"\n"
             f"SERVER_LOG=\"{SERVER_DIR}/server.log\"\n"
             f"echo \"[$(date '+%Y-%m-%d %H:%M:%S')] SERVER START: Launching server\" >> \"$STARTUP_LOG\"\n"
+            f"# Replace YOUR_SERVER_EXE with your game server binary\n"
+            f"# tmux new-session -d -s gameserver \"./YOUR_SERVER_EXE {args_str} 2>&1 | tee -a $SERVER_LOG\"\n"
             f"echo 'Edit this script to launch your server'\n"
-            f"# Replace the line below with your launch command\n"
-            f"# ./your-server {args_str} 2>&1 | tee -a \"$SERVER_LOG\"\n"
         )
 
     try:
