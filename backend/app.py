@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 from models import init_db, log_activity as db_log_activity, user_count
 from auth import get_current_user, require_auth, require_admin, login, logout, register
 from process_manager import (
-    get_state, set_state, is_running, launch_server, kill_server,
+    get_state, set_state, is_running, launch_server, kill_server, graceful_stop,
     get_uptime, get_server_usage, get_player_count, monitor_loop, write_startup_marker,
 )
 from stats import get_system_stats, get_health, get_history, collect_loop
@@ -244,21 +244,7 @@ def api_stop():
     db_log_activity(user["id"] if user else None, "STOP server")
     write_startup_marker("User stop: Server stopped by user")
 
-    kill_server()
-
-    def wait():
-        for _ in range(STOP_TIMEOUT):
-            time.sleep(1)
-            if not is_running():
-                set_state("offline")
-                return
-        logger.error("Server failed to stop within timeout")
-        if is_running():
-            set_state("crashed")
-        else:
-            set_state("offline")
-
-    threading.Thread(target=wait, daemon=True).start()
+    threading.Thread(target=graceful_stop, daemon=True).start()
     return "", 204
 
 
@@ -592,6 +578,28 @@ def api_ping_game():
     except Exception as e:
         logger.error(f"Error checking game port: {e}")
         return jsonify({"reachable": False, "port": 0, "error": str(e)})
+
+
+@app.route("/api/server-ip")
+@require_auth
+def api_server_ip():
+    """Get the server's public IP address"""
+    try:
+        import requests as req
+        resp = req.get("https://api.ipify.org", timeout=5)
+        ip = resp.text.strip()
+    except Exception as e:
+        logger.error(f"Error fetching public IP: {e}")
+        ip = "unknown"
+
+    # Extract game port
+    game_port = None
+    for arg in SERVER_ARGS:
+        if arg.lower().startswith('-port='):
+            game_port = arg.split('=')[1]
+            break
+
+    return jsonify({"ip": ip, "port": game_port or ""})
 
 
 # ================= API: HEALTH (PUBLIC) =================

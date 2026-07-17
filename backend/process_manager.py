@@ -150,7 +150,7 @@ def launch_server():
 
 
 def kill_server():
-    """Kill the game server process"""
+    """Kill the game server process (force - SIGKILL)"""
     try:
         killed = False
         for proc in psutil.process_iter(["name", "cmdline", "pid"]):
@@ -174,6 +174,48 @@ def kill_server():
         logger.info("Kill command executed")
     except Exception as e:
         logger.error(f"Failed to kill server: {e}")
+
+
+def graceful_stop():
+    """Attempt graceful shutdown via tmux Ctrl+C, then force kill if needed"""
+    graceful = False
+    try:
+        result = subprocess.run(
+            ["tmux", "send-keys", "-t", "gameserver", "C-c", ""],
+            capture_output=True, timeout=5,
+        )
+        if result.returncode == 0:
+            graceful = True
+            logger.info("Sent Ctrl+C to tmux session 'gameserver' for graceful shutdown")
+    except Exception as e:
+        logger.warning(f"Could not send graceful stop via tmux: {e}")
+
+    # If graceful signal was sent, wait for it to take effect
+    grace_period = 10 if graceful else 0
+    for _ in range(grace_period):
+        time.sleep(1)
+        if not is_running():
+            set_state("offline")
+            return True
+
+    # If still running after grace period, force kill
+    if is_running():
+        logger.info("Server did not stop gracefully, force killing")
+        kill_server()
+
+    for _ in range(STOP_TIMEOUT - grace_period):
+        time.sleep(1)
+        if not is_running():
+            set_state("offline")
+            return True
+
+    # Failed to stop
+    logger.error("Server failed to stop within timeout")
+    if is_running():
+        set_state("crashed")
+    else:
+        set_state("offline")
+    return False
 
 
 def get_uptime():

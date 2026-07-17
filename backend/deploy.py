@@ -109,6 +109,15 @@ def _run_deploy():
             logger.info("Deploy: SteamCMD completed successfully")
             # Generate start.sh if it doesn't exist
             _generate_start_script()
+            # Save build ID so update detection works
+            try:
+                from updates import get_latest_build_id, save_current_build_id
+                build_id = get_latest_build_id()
+                if build_id:
+                    save_current_build_id(build_id)
+                    logger.info(f"Deploy: Saved initial build ID: {build_id}")
+            except Exception as e:
+                logger.warning(f"Deploy: Could not save build ID: {e}")
             _deploy_status = "complete"
         else:
             _deploy_status = f"failed (exit code {process.returncode})"

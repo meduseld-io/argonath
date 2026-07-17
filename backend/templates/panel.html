@@ -603,9 +603,6 @@
                     if (data.state === 'running' && data.players !== undefined && data.players !== null) {
                         playerEl.textContent = data.players + ' / ' + MAX_PLAYERS;
                         playerEl.style.color = data.players > 0 ? 'var(--green-bright)' : '';
-                    } else if (data.state === 'running') {
-                        playerEl.textContent = '? / ' + MAX_PLAYERS;
-                        playerEl.style.color = '';
                     } else {
                         playerEl.textContent = '-- / ' + MAX_PLAYERS;
                         playerEl.style.color = '';
@@ -895,12 +892,20 @@
             initGrid();
 
             // Set server IP in config widget
-            const ipEl = document.getElementById('server-ip');
-            if (ipEl) {
-                const host = window.location.hostname;
-                const port = GAME_PORT || '—';
-                ipEl.textContent = host === 'localhost' || host === '127.0.0.1' ? 'localhost:' + port : host + ':' + port;
+            async function fetchServerIp() {
+                const ipEl = document.getElementById('server-ip');
+                if (!ipEl) return;
+                try {
+                    const res = await fetch('/api/server-ip');
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    ipEl.textContent = data.ip + (data.port ? ':' + data.port : '');
+                } catch (e) {
+                    console.error('Failed to fetch server IP:', e);
+                    ipEl.textContent = 'unavailable';
+                }
             }
+            fetchServerIp();
 
             // Then init settings (colours), charts, and start polling
             initSettings();
