@@ -912,6 +912,50 @@
             }
             fetchServerIp();
 
+            // Check if a deploy is already in progress (e.g. after page refresh)
+            async function checkDeployInProgress() {
+                try {
+                    const res = await fetch('/api/deploy/status');
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (data.in_progress) {
+                        // Resume deploy UI
+                        const btn = document.getElementById('btn-deploy');
+                        const hint = document.getElementById('deploy-hint');
+                        const status = document.getElementById('deploy-status');
+                        if (btn) { btn.disabled = true; btn.textContent = 'Deploying...'; }
+                        if (hint) hint.style.display = 'none';
+                        if (status) status.style.display = '';
+                        // Start polling
+                        _deployPollInterval = setInterval(async () => {
+                            try {
+                                const statusRes = await fetch('/api/deploy/status');
+                                const d = await statusRes.json();
+                                const lastLine = d.output ? d.output.split('\n').pop() : 'Working...';
+                                if (status) status.textContent = lastLine;
+                                if (d.status === 'complete') {
+                                    clearInterval(_deployPollInterval);
+                                    showToast('Deploy complete! Server files installed.', 'success');
+                                    isDeployed = true;
+                                    setTimeout(fetchStats, 1000);
+                                } else if (d.status.startsWith('failed')) {
+                                    clearInterval(_deployPollInterval);
+                                    showToast('Deploy failed: ' + d.status, 'error');
+                                    if (btn) { btn.style.display = ''; btn.disabled = false; btn.textContent = 'Deploy Server'; }
+                                    if (hint) hint.style.display = '';
+                                    if (status) status.style.display = 'none';
+                                }
+                            } catch (e) {
+                                console.error('Deploy status poll failed:', e);
+                            }
+                        }, 2000);
+                    }
+                } catch (e) {
+                    console.error('Deploy check failed:', e);
+                }
+            }
+            checkDeployInProgress();
+
             // Then init settings (colours), charts, and start polling
             initSettings();
             initCharts();
