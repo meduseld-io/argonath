@@ -914,5 +914,9 @@ main {
 
 .deploy-status {
     color: var(--accent-bright);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
+    font-family: 'SF Mono', 'JetBrains Mono', monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

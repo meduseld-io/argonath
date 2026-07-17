@@ -695,7 +695,8 @@
                     try {
                         const statusRes = await fetch('/api/deploy/status');
                         const data = await statusRes.json();
-                        if (status) status.textContent = 'Deploying... (' + data.line_count + ' lines)';
+                        const lastLine = data.output ? data.output.split('\n').pop() : 'Working...';
+                        if (status) status.textContent = lastLine;
 
                         if (data.status === 'complete') {
                             clearInterval(_deployPollInterval);
