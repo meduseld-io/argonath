@@ -147,16 +147,46 @@ def _generate_start_script():
 
     if "palworld" in game_lower:
         exe = os.path.join(SERVER_DIR, "PalServer.sh")
-        content = f"#!/bin/bash\ncd {SERVER_DIR}\n{exe} {args_str}\n"
+        content = (
+            f"#!/bin/bash\n"
+            f"cd {SERVER_DIR}\n"
+            f"STARTUP_LOG=\"{SERVER_DIR}/startup.log\"\n"
+            f"SERVER_LOG=\"{SERVER_DIR}/server.log\"\n"
+            f"echo \"[$(date '+%Y-%m-%d %H:%M:%S')] SERVER START: Launching {GAME_NAME} server\" >> \"$STARTUP_LOG\"\n"
+            f"{exe} {args_str} 2>&1 | tee -a \"$SERVER_LOG\"\n"
+        )
     elif "valheim" in game_lower:
         exe = os.path.join(SERVER_DIR, "valheim_server.x86_64")
-        content = f"#!/bin/bash\ncd {SERVER_DIR}\n{exe} {args_str}\n"
+        content = (
+            f"#!/bin/bash\n"
+            f"cd {SERVER_DIR}\n"
+            f"STARTUP_LOG=\"{SERVER_DIR}/startup.log\"\n"
+            f"SERVER_LOG=\"{SERVER_DIR}/server.log\"\n"
+            f"echo \"[$(date '+%Y-%m-%d %H:%M:%S')] SERVER START: Launching {GAME_NAME} server\" >> \"$STARTUP_LOG\"\n"
+            f"{exe} {args_str} 2>&1 | tee -a \"$SERVER_LOG\"\n"
+        )
     elif "satisfactory" in game_lower:
         exe = os.path.join(SERVER_DIR, "FactoryServer.sh")
-        content = f"#!/bin/bash\ncd {SERVER_DIR}\n{exe} {args_str}\n"
+        content = (
+            f"#!/bin/bash\n"
+            f"cd {SERVER_DIR}\n"
+            f"STARTUP_LOG=\"{SERVER_DIR}/startup.log\"\n"
+            f"SERVER_LOG=\"{SERVER_DIR}/server.log\"\n"
+            f"echo \"[$(date '+%Y-%m-%d %H:%M:%S')] SERVER START: Launching {GAME_NAME} server\" >> \"$STARTUP_LOG\"\n"
+            f"{exe} {args_str} 2>&1 | tee -a \"$SERVER_LOG\"\n"
+        )
     else:
-        # Generic fallback - look for common patterns
-        content = f"#!/bin/bash\ncd {SERVER_DIR}\necho 'Edit this script to launch your server'\n# Add your launch command here\n"
+        # Generic fallback
+        content = (
+            f"#!/bin/bash\n"
+            f"cd {SERVER_DIR}\n"
+            f"STARTUP_LOG=\"{SERVER_DIR}/startup.log\"\n"
+            f"SERVER_LOG=\"{SERVER_DIR}/server.log\"\n"
+            f"echo \"[$(date '+%Y-%m-%d %H:%M:%S')] SERVER START: Launching server\" >> \"$STARTUP_LOG\"\n"
+            f"echo 'Edit this script to launch your server'\n"
+            f"# Replace the line below with your launch command\n"
+            f"# ./your-server {args_str} 2>&1 | tee -a \"$SERVER_LOG\"\n"
+        )
 
     try:
         os.makedirs(os.path.dirname(script_path), exist_ok=True)

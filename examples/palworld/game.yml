@@ -5,7 +5,7 @@ game:
   process_name: "PalServer-Linux-Shipping"
   launch_script: "/game/start.sh"
   server_dir: "/game"
-  log_file: "/game/Pal/Saved/Logs/Pal.log"
+  log_file: "/game/server.log"
   max_players: 32
   args: ["-port=8211", "-queryport=27015", "-log", "-useperfthreads", "-NoAsyncLoadingThread", "-UseMultithreadForDS"]
 
