@@ -7,7 +7,7 @@ game:
   server_dir: "/game"
   log_file: "/game/logs/valheim.log"
   max_players: 10
-  args: ["-name", "MyServer", "-port", "2456", "-world", "Dedicated"]
+  args: ["-name", "MyServer", "-port", "2456", "-world", "Dedicated", "-password", "changeme"]
 
 server:
   port: 5000

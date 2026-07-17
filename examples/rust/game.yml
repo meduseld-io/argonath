@@ -7,7 +7,7 @@ game:
   server_dir: "/game"
   log_file: "/game/RustDedicated_Data/output_log.txt"
   max_players: 50
-  args: ["-batchmode", "+server.port", "28015", "+server.queryport", "28016", "+server.level", "Procedural Map", "+server.seed", "12345", "+server.worldsize", "3000", "+server.maxplayers", "50", "+server.hostname", "MyServer"]
+  args: ["-batchmode", "+server.port", "28015", "+server.queryport", "28016", "+server.level", "Procedural Map", "+server.seed", "12345", "+server.worldsize", "3000", "+server.maxplayers", "50", "+server.hostname", "MyServer", "+server.password", "changeme"]
 
 server:
   port: 5000

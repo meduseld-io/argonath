@@ -7,7 +7,7 @@ game:
   server_dir: "/game"
   log_file: "/game/ShooterGame/Saved/Logs/ShooterGame.log"
   max_players: 70
-  args: ["TheIsland_WP?listen?SessionName=MyServer?MaxPlayers=70", "-server", "-log", "-NoBattlEye"]
+  args: ["TheIsland_WP?listen?SessionName=MyServer?ServerPassword=changeme?MaxPlayers=70", "-server", "-log", "-NoBattlEye"]
 
 server:
   port: 5000
