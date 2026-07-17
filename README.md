@@ -45,6 +45,8 @@ docker compose up -d
 
 Open `http://localhost:5000` - the first user to register becomes admin.
 
+> **Headless server?** If you're running on a remote Linux box without a desktop, access the panel from your local machine using an SSH tunnel: `ssh -L 5000:localhost:5000 user@your-server-ip`, then open `http://localhost:5000` in your local browser. Alternatively, put it behind a reverse proxy with a domain (see [Custom Domain](#custom-domain) below).
+
 ## Configuration
 
 All configuration lives in a single `config/game.yml` file:
