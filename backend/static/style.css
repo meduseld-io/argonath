@@ -480,6 +480,13 @@ main {
     margin-bottom: 1rem;
 }
 
+.form-hint {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+}
+
 .auth-link {
     margin-top: 1rem;
     font-size: 0.75rem;
