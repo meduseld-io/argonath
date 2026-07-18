@@ -137,7 +137,11 @@ def _run_deploy():
 
 
 def _generate_start_script():
-    """Generate a default start.sh for the game"""
+    """Generate a default start.sh for the game.
+    
+    The script pipes server output to server.log so the panel's log viewer
+    can display it. The log file path matches what's set in game.yml log_file.
+    """
     script_path = LAUNCH_SCRIPT or os.path.join(SERVER_DIR, "start.sh")
 
     if os.path.exists(script_path):
@@ -159,18 +163,22 @@ def _generate_start_script():
     else:
         exe = ""
 
+    # Use the configured log_file path, falling back to server.log in the game dir
+    from config import LOG_FILE
+    log_path = LOG_FILE or os.path.join(SERVER_DIR, "server.log")
+
     if exe:
         content = (
             f"#!/bin/bash\n"
             f"cd {SERVER_DIR}\n"
-            f"exec {exe} {args_str}\n"
+            f"{exe} {args_str} 2>&1 | tee -a {log_path}\n"
         )
     else:
         content = (
             f"#!/bin/bash\n"
             f"cd {SERVER_DIR}\n"
             f"echo 'Edit this script to launch your server'\n"
-            f"# exec ./YOUR_SERVER_EXE {args_str}\n"
+            f"# ./YOUR_SERVER_EXE {args_str} 2>&1 | tee -a {log_path}\n"
         )
 
     try:

@@ -31,7 +31,7 @@ Fills the gap between [Pterodactyl](https://pterodactyl.io/) (multi-server, mult
 mkdir argonath && cd argonath
 
 # 2. Create subdirectories
-mkdir -p config game
+mkdir -p config
 
 # 3. Create your config
 # Copy an example from the repo's examples/ folder into config/game.yml
@@ -45,7 +45,23 @@ docker compose up -d
 
 Open `http://localhost:5000` - the first user to register becomes admin.
 
+Click **Deploy** to download the game server via SteamCMD. Once complete, click **Start** to launch it. That's it.
+
 > **Headless server?** If you're running on a remote Linux box without a desktop, access the panel from your local machine using an SSH tunnel: `ssh -L 5000:localhost:5000 user@your-server-ip`, then open `http://localhost:5000` in your local browser. Alternatively, put it behind a reverse proxy with a domain (see [Custom Domain](#custom-domain) below).
+
+## What Happens Automatically
+
+After you click Deploy:
+
+- **SteamCMD** downloads and installs the game server files (bundled in the Docker image - no separate install needed)
+- **start.sh** is auto-generated for known games (Palworld, Valheim, Satisfactory) with output piped to `server.log`
+- **Game logs** are captured to the file specified by `log_file` in your `game.yml` via the generated start script
+- **Startup logs** track start/stop/crash events in `/data/startup.log` (internal, always works)
+- **Update detection** checks for new Steam builds every hour and shows an "Update Available" badge
+- **Process monitoring** detects crashes and updates the panel state automatically
+- **Backups** archive the configured `save_dir` to timestamped `.tar.gz` files in `/data/backups/`
+
+For unknown games, the generated `start.sh` contains a template you'll need to edit once with your server executable name.
 
 ## Configuration
 
@@ -58,7 +74,7 @@ game:
   process_name: "valheim_server.x86_64"
   launch_script: "/game/start.sh"
   server_dir: "/game"
-  log_file: "/game/logs/valheim.log"
+  log_file: "/game/server.log"
   max_players: 10
 
 auth:
@@ -77,6 +93,23 @@ backup:
 compatibility:
   wine: false
 ```
+
+### Key Fields
+
+| Field | Purpose |
+|-------|---------|
+| `process_name` | The executable name psutil scans for to detect if the server is running |
+| `launch_script` | Path to the start script (auto-generated on deploy for known games) |
+| `log_file` | Where game server output is written - the panel's "Server Logs" reads this file |
+| `save_dir` | Directory to archive when you click Backup |
+| `steam_app_id` | Used by SteamCMD for deploy and update checks |
+
+### How Logs Work
+
+Argonath has two log panels:
+
+- **Server Logs** - reads the file at `log_file` in your `game.yml`. The auto-generated `start.sh` pipes game server stdout/stderr to this file using `tee`. If you write your own start script, make sure it pipes output to this path.
+- **Startup Logs** - tracks lifecycle events (start, stop, crash, kill) in `/data/startup.log`. This is managed internally by Argonath and always works.
 
 ## Example Configs
 
@@ -99,6 +132,7 @@ services:
     image: ghcr.io/meduseld-io/argonath:latest
     ports:
       - "5000:5000"
+    # pid: host  # Uncomment to monitor a game server running outside the container
     volumes:
       - ./game:/game
       - ./config:/config
@@ -110,6 +144,8 @@ services:
 volumes:
   panel-data:
 ```
+
+> **Already have a game server running?** If you want Argonath to monitor an existing server process (not launched by Argonath), add `pid: host` to the compose file and mount the real game directory instead of `./game`. This lets psutil see host processes.
 
 ## Environment Variables
 

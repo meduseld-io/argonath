@@ -8,7 +8,7 @@ game:
   log_file: "/game/server.log"
   max_players: 32
   query_port: 27015
-  args: ["-port=8211", "-queryport=27015", "-ServerPassword=changeme", "-useperfthreads", "-NoAsyncLoadingThread", "-UseMultithreadForDS"]
+  args: ["-port=8211", "-queryport=27015", "-useperfthreads", "-NoAsyncLoadingThread", "-UseMultithreadForDS"]
 
 server:
   port: 5000

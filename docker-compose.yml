@@ -4,6 +4,7 @@ services:
     # build: .  # Uncomment for local development
     ports:
       - "5000:5000"
+    # pid: host  # Uncomment to monitor a game server running outside the container
     volumes:
       - ./game:/game
       - ./config:/config

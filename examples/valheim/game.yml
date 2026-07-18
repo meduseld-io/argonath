@@ -5,7 +5,7 @@ game:
   process_name: "valheim_server.x86_64"
   launch_script: "/game/start.sh"
   server_dir: "/game"
-  log_file: "/game/logs/valheim.log"
+  log_file: "/game/server.log"
   max_players: 10
   args: ["-name", "MyServer", "-port", "2456", "-world", "Dedicated", "-password", "changeme"]
 
