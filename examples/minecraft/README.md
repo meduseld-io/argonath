@@ -1,6 +1,6 @@
 # Minecraft Java Edition
 
-Vanilla Minecraft server. Does not use SteamCMD - download `server.jar` directly from Minecraft's website.
+Vanilla Minecraft server. Uses Mojang's version manifest API for automatic deploy and update detection - no SteamCMD needed.
 
 ## Ports
 
@@ -12,16 +12,24 @@ Vanilla Minecraft server. Does not use SteamCMD - download `server.jar` directly
 ## Prerequisites
 
 - Java 21+ must be installed in the container (OpenJDK recommended)
-- Download `server.jar` from https://www.minecraft.net/en-us/download/server
 
 ## Setup
 
-1. Copy `game.yml` and `start.sh` to your Argonath `config/` folder
+1. Copy `game.yml` to your Argonath `config/` folder
 2. Install Java 21 in your Docker image (e.g. `apt install openjdk-21-jre-headless`)
-3. Download `server.jar` and place it in `/game/`
-4. Run the server once - it will generate `eula.txt`
-5. Edit `eula.txt` and set `eula=true`
-6. Start the server from the panel
+3. Click **Deploy** in the panel - it will:
+   - Download the latest `server.jar` from Mojang
+   - Accept the EULA automatically
+   - Generate a `start.sh` script
+4. Click **Start** to launch the server
+
+## Update Detection
+
+Argonath checks Mojang's version manifest API every hour for new releases. When a new Minecraft version is published:
+
+- The panel shows an "Update Available" badge (e.g. `1.21.1 -> 1.21.2`)
+- Clicking **Restart** downloads the new `server.jar` and relaunches
+- Starting the server also auto-updates if a new version is available
 
 ## Configuration
 
@@ -43,7 +51,7 @@ enable-rcon=false
 
 ## Memory
 
-The `start.sh` allocates 4GB max / 2GB min by default. Adjust `-Xmx` and `-Xms` in `start.sh` based on your available RAM and expected player count:
+The generated `start.sh` allocates 4GB max / 2GB min by default. Adjust `-Xmx` and `-Xms` in `start.sh` based on your available RAM:
 
 - 1-5 players: 2-4GB
 - 5-10 players: 4-6GB
@@ -51,8 +59,8 @@ The `start.sh` allocates 4GB max / 2GB min by default. Adjust `-Xmx` and `-Xms` 
 
 ## Notes
 
-- Accept the EULA on first run or the server won't start
-- For modded servers (Forge/Fabric), replace `server.jar` with the modded server jar and adjust the start command
+- The EULA is auto-accepted during deploy
+- For modded servers (Forge/Fabric), replace `server.jar` manually and adjust `start.sh`
 - World data is in the `world/` directory
 - Logs are in `logs/latest.log`
 - The process name is `java` since Minecraft runs on the JVM

@@ -1,4 +1,6 @@
-# Minecraft Java Edition Server (no SteamCMD)
+# Minecraft Java Edition Server
+# Deploy downloads the latest server.jar from Mojang automatically.
+# Update detection checks for new Minecraft releases every hour.
 game:
   name: "Minecraft"
   steam_app_id: ""

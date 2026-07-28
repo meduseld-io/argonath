@@ -22,7 +22,9 @@ from config import (
     SERVER_ARGS,
     GAME_NAME,
     WINE_ENABLED,
+    LOG_FILE,
 )
+from minecraft import is_minecraft
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +57,10 @@ def start_deploy():
             return False
         _deploy_in_progress = True
 
-    threading.Thread(target=_run_deploy, daemon=True).start()
+    if is_minecraft(GAME_NAME):
+        threading.Thread(target=_run_minecraft_deploy, daemon=True).start()
+    else:
+        threading.Thread(target=_run_deploy, daemon=True).start()
     return True
 
 
@@ -199,3 +204,69 @@ def get_deploy_status():
         "line_count": _deploy_line_count,
         "in_progress": _deploy_in_progress,
     }
+
+
+def _run_minecraft_deploy():
+    """Deploy Minecraft server by downloading server.jar from Mojang."""
+    global _deploy_in_progress, _deploy_status, _deploy_output, _deploy_line_count
+
+    _deploy_status = "running"
+    _deploy_output = ""
+    _deploy_line_count = 0
+
+    try:
+        from minecraft import (
+            get_latest_release_info,
+            download_server_jar,
+            generate_minecraft_start_script,
+            accept_eula,
+        )
+        from updates import save_current_build_id
+
+        _deploy_output = "Fetching latest Minecraft version..."
+        _deploy_line_count = 1
+
+        version_id, jar_url = get_latest_release_info()
+        if not version_id or not jar_url:
+            _deploy_status = "failed"
+            _deploy_output += "\nFailed to fetch Minecraft version manifest"
+            logger.error("Minecraft deploy: Failed to get version info")
+            return
+
+        _deploy_output += f"\nLatest release: {version_id}"
+        _deploy_output += f"\nDownloading server.jar..."
+        _deploy_line_count = 3
+
+        success = download_server_jar(jar_url, SERVER_DIR)
+        if not success:
+            _deploy_status = "failed"
+            _deploy_output += "\nFailed to download server.jar"
+            return
+
+        _deploy_output += "\nDownload complete"
+        _deploy_output += "\nAccepting EULA..."
+        _deploy_line_count = 5
+
+        accept_eula(SERVER_DIR)
+
+        _deploy_output += "\nGenerating start script..."
+        _deploy_line_count = 6
+
+        log_file = LOG_FILE or os.path.join(SERVER_DIR, "logs/latest.log")
+        script_path = LAUNCH_SCRIPT or os.path.join(SERVER_DIR, "start.sh")
+        generate_minecraft_start_script(SERVER_DIR, script_path, log_file)
+
+        # Save the version as the build ID for update detection
+        save_current_build_id(version_id)
+
+        _deploy_output += f"\nDeployed Minecraft {version_id} successfully"
+        _deploy_line_count = 7
+        _deploy_status = "complete"
+        logger.info("Minecraft deploy complete: version %s", version_id)
+
+    except Exception as e:
+        _deploy_status = "failed"
+        _deploy_output += f"\nError: {str(e)}"
+        logger.error("Minecraft deploy error: %s", e)
+    finally:
+        _deploy_in_progress = False

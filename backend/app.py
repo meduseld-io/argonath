@@ -66,6 +66,7 @@ from process_manager import (
 from stats import get_system_stats, get_health, get_history, collect_loop
 from updates import check_for_updates, run_update, get_update_info, check_updates_loop
 from deploy import is_deployed, start_deploy, get_deploy_status
+from minecraft import is_minecraft
 
 # Flask app
 app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -208,6 +209,10 @@ def api_start():
         logger.info("Update available - running update before start")
         run_update()
         time.sleep(2)
+    elif is_minecraft(GAME_NAME) and check_for_updates():
+        logger.info("Minecraft update available - downloading new jar")
+        run_update()
+        time.sleep(2)
 
     launch_server()
 
@@ -286,7 +291,7 @@ def api_restart():
                 break
 
         # Update
-        if STEAMCMD_ENABLED:
+        if STEAMCMD_ENABLED or is_minecraft(GAME_NAME):
             run_update()
 
         time.sleep(2)
@@ -456,7 +461,7 @@ def api_deploy():
     if is_running():
         return jsonify({"error": "Cannot deploy while server is running"}), 400
 
-    if not STEAMCMD_ENABLED:
+    if not STEAMCMD_ENABLED and not is_minecraft(GAME_NAME):
         return jsonify({"error": "SteamCMD is not enabled in config"}), 400
 
     success = start_deploy()
@@ -649,7 +654,7 @@ def start_background_threads():
     """Start all background monitoring threads"""
     threading.Thread(target=monitor_loop, daemon=True, name="monitor").start()
     threading.Thread(target=collect_loop, daemon=True, name="stats").start()
-    if STEAMCMD_ENABLED and STEAM_APP_ID:
+    if (STEAMCMD_ENABLED and STEAM_APP_ID) or is_minecraft(GAME_NAME):
         threading.Thread(target=check_updates_loop, daemon=True, name="updates").start()
 
 

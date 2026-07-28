@@ -20,7 +20,10 @@ from config import (
     VERSION_FILE,
     UPDATE_TIMEOUT,
     UPDATE_CHECK_INTERVAL,
+    GAME_NAME,
+    SERVER_DIR,
 )
+from minecraft import is_minecraft
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +102,10 @@ def check_for_updates():
     """Check if an update is available. Returns True if update available."""
     global current_build_id, latest_build_id
 
+    # Minecraft uses Mojang API instead of Steam
+    if is_minecraft(GAME_NAME):
+        return _check_minecraft_updates()
+
     if not STEAMCMD_ENABLED or not STEAM_APP_ID:
         return False
 
@@ -114,9 +121,35 @@ def check_for_updates():
     return False
 
 
+def _check_minecraft_updates():
+    """Check Mojang API for a newer Minecraft version."""
+    global current_build_id, latest_build_id
+
+    from minecraft import get_latest_release_info
+
+    current_build_id = get_current_build_id()
+    version_id, _ = get_latest_release_info()
+    latest_build_id = version_id
+
+    if current_build_id and latest_build_id:
+        available = current_build_id != latest_build_id
+        if available:
+            logger.info(
+                "Minecraft update available: %s -> %s",
+                current_build_id, latest_build_id
+            )
+        return available
+
+    return False
+
+
 def run_update():
-    """Run SteamCMD to update the game server"""
+    """Run SteamCMD to update the game server, or download new Minecraft jar."""
     global last_update_status, last_update_time, last_update_output, current_build_id
+
+    # Minecraft update path
+    if is_minecraft(GAME_NAME):
+        return _run_minecraft_update()
 
     if not STEAMCMD_ENABLED:
         last_update_status = "disabled"
@@ -175,6 +208,40 @@ def run_update():
         last_update_status = f"error: {str(e)}"
         last_update_time = time.time()
         logger.error(f"SteamCMD update error: {e}")
+        return False
+
+
+def _run_minecraft_update():
+    """Download the latest Minecraft server.jar."""
+    global last_update_status, last_update_time, last_update_output, current_build_id
+
+    from minecraft import get_latest_release_info, download_server_jar
+
+    try:
+        version_id, jar_url = get_latest_release_info()
+        if not version_id or not jar_url:
+            last_update_status = "failed (could not fetch version)"
+            last_update_time = time.time()
+            return False
+
+        success = download_server_jar(jar_url, SERVER_DIR)
+        last_update_time = time.time()
+
+        if success:
+            last_update_status = "success"
+            last_update_output = f"Updated to Minecraft {version_id}"
+            save_current_build_id(version_id)
+            current_build_id = version_id
+            logger.info("Minecraft updated to %s", version_id)
+            return True
+        else:
+            last_update_status = "failed (download error)"
+            return False
+
+    except Exception as e:
+        last_update_status = f"error: {str(e)}"
+        last_update_time = time.time()
+        logger.error("Minecraft update error: %s", e)
         return False
 
 

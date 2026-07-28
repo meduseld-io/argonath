@@ -122,7 +122,7 @@ Valheim, Satisfactory, Palworld, Project Zomboid, Terraria, Rust, 7 Days to Die,
 Icarus, Enshrouded, V Rising, ARK: Survival Ascended, Sons of the Forest, Conan Exiles
 
 **Non-Steam (no SteamCMD):**
-Minecraft (Java), Factorio
+Minecraft (Java) - auto-deploys via Mojang API, Factorio
 
 ## Docker Compose
 
