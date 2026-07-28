@@ -113,13 +113,13 @@ Argonath has two log panels:
 
 ## Example Configs
 
-The `examples/` directory includes ready-to-use configurations for 22 games:
+The `examples/` directory includes ready-to-use configurations for 20 games, each with a README covering ports, setup steps, and configuration:
 
 **Native Linux:**
-Valheim, Satisfactory, Palworld, Project Zomboid, Terraria, Rust, 7 Days to Die, Counter-Strike 2, Core Keeper, Left 4 Dead 2, Don't Starve Together, Unturned, Arma 3
+Valheim, Satisfactory, Palworld, Project Zomboid, Terraria, Rust, 7 Days to Die, Counter-Strike 2, Core Keeper, Left 4 Dead 2, Don't Starve Together, Unturned
 
 **Wine/Proton required:**
-Icarus, Enshrouded, V Rising, ARK: Survival Ascended, Sons of the Forest, Conan Exiles, Astroneer
+Icarus, Enshrouded, V Rising, ARK: Survival Ascended, Sons of the Forest, Conan Exiles
 
 **Non-Steam (no SteamCMD):**
 Minecraft (Java), Factorio
