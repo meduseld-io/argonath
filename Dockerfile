@@ -1,11 +1,12 @@
 FROM python:3.12-slim
 
-# Install system dependencies
+# Install system dependencies (includes Java for Minecraft server support)
 RUN apt-get update && apt-get install -y \
     procps \
     tmux \
     curl \
     lib32gcc-s1 \
+    default-jre-headless \
     && rm -rf /var/lib/apt/lists/*
 
 # Install SteamCMD

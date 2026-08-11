@@ -128,21 +128,22 @@ Minecraft (Java) - auto-deploys via Mojang API, Factorio
 
 ```yaml
 services:
-  panel:
+  argonath:
     image: ghcr.io/meduseld-io/argonath:latest
+    container_name: argonath
     ports:
       - "5000:5000"
     # pid: host  # Uncomment to monitor a game server running outside the container
     volumes:
       - ./game:/game
       - ./config:/config
-      - panel-data:/data
+      - argonath-data:/data
     environment:
       - TZ=America/New_York
     restart: unless-stopped
 
 volumes:
-  panel-data:
+  argonath-data:
 ```
 
 > **Already have a game server running?** If you want Argonath to monitor an existing server process (not launched by Argonath), add `pid: host` to the compose file and mount the real game directory instead of `./game`. This lets psutil see host processes.

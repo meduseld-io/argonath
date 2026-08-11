@@ -176,12 +176,14 @@ def _generate_start_script():
         content = (
             f"#!/bin/bash\n"
             f"cd {SERVER_DIR}\n"
+            f"mkdir -p $(dirname {log_path})\n"
             f"{exe} {args_str} 2>&1 | tee -a {log_path}\n"
         )
     else:
         content = (
             f"#!/bin/bash\n"
             f"cd {SERVER_DIR}\n"
+            f"mkdir -p $(dirname {log_path})\n"
             f"echo 'Edit this script to launch your server'\n"
             f"# ./YOUR_SERVER_EXE {args_str} 2>&1 | tee -a {log_path}\n"
         )

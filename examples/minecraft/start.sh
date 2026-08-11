@@ -4,5 +4,6 @@
 # Adjust -Xmx and -Xms for your available RAM.
 
 cd /game
+mkdir -p /game/logs
 
 exec java -Xmx4G -Xms2G -jar server.jar nogui 2>&1 | tee -a /game/logs/latest.log

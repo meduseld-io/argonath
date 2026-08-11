@@ -109,6 +109,12 @@ def launch_server():
         except Exception as e:
             logger.warning(f"Could not set execute permission: {e}")
 
+        # Ensure log file parent directory exists
+        if LOG_FILE:
+            log_dir = os.path.dirname(LOG_FILE)
+            if log_dir:
+                os.makedirs(log_dir, exist_ok=True)
+
         # Kill stale tmux session if it exists
         try:
             tmux_check = subprocess.run(

@@ -108,6 +108,7 @@ def generate_minecraft_start_script(dest_dir, launch_script_path, log_file):
     content = (
         "#!/bin/bash\n"
         f"cd {dest_dir}\n"
+        f"mkdir -p $(dirname {log_file})\n"
         f"exec java -Xmx4G -Xms2G -jar server.jar nogui 2>&1 | tee -a {log_file}\n"
     )
 

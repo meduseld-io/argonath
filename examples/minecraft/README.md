@@ -1,6 +1,6 @@
 # Minecraft Java Edition
 
-Vanilla Minecraft server. Uses Mojang's version manifest API for automatic deploy and update detection - no SteamCMD needed.
+Vanilla Minecraft server. Uses Mojang's version manifest API for automatic deploy and update detection - no SteamCMD needed. Java is included in the Docker image.
 
 ## Ports
 
@@ -9,19 +9,14 @@ Vanilla Minecraft server. Uses Mojang's version manifest API for automatic deplo
 | 25565 | TCP      | Game    |
 | 25575 | TCP      | RCON    |
 
-## Prerequisites
-
-- Java 21+ must be installed in the container (OpenJDK recommended)
-
 ## Setup
 
 1. Copy `game.yml` to your Argonath `config/` folder
-2. Install Java 21 in your Docker image (e.g. `apt install openjdk-21-jre-headless`)
-3. Click **Deploy** in the panel - it will:
+2. Click **Deploy** in the panel - it will:
    - Download the latest `server.jar` from Mojang
    - Accept the EULA automatically
    - Generate a `start.sh` script
-4. Click **Start** to launch the server
+3. Click **Start** to launch the server
 
 ## Update Detection
 

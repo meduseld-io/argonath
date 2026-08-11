@@ -214,7 +214,12 @@ def api_start():
         run_update()
         time.sleep(2)
 
-    launch_server()
+    try:
+        launch_server()
+    except Exception as e:
+        logger.error(f"Failed to start server: {e}")
+        set_state("offline", force=True)
+        return jsonify({"error": str(e)}), 500
 
     def wait():
         for i in range(START_TIMEOUT):
