@@ -2,24 +2,22 @@
 game:
   name: "Rust"
   steam_app_id: "258550"
+  executable: "RustDedicated"
   process_name: "RustDedicated"
-  launch_script: "/game/start.sh"
-  server_dir: "/game"
-  log_file: "/game/RustDedicated_Data/output_log.txt"
+  env:
+    LD_LIBRARY_PATH: "./RustDedicated_Data/Plugins/x86_64:.:$LD_LIBRARY_PATH"
+  args: ["-batchmode", "-logfile", "/game/logs/rust.log",
+         "+server.port", "28015", "+server.queryport", "28017",
+         "+server.level", "Procedural Map", "+server.seed", "12345", "+server.worldsize", "3000",
+         "+server.maxplayers", "50", "+server.hostname", "MyServer",
+         "+server.identity", "argonath"]
+  log_file: "/game/logs/rust.log"
+  console_log: "/game/logs/console.log"
   max_players: 50
-  args: ["-batchmode", "+server.port", "28015", "+server.queryport", "28016", "+server.level", "Procedural Map", "+server.seed", "12345", "+server.worldsize", "3000", "+server.maxplayers", "50", "+server.hostname", "MyServer", "+server.password", "changeme"]
+  port: 28015
+  port_protocol: "udp"
+  query_port: 28017
+  stop_timeout: 90
 
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
-
-steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true
-
-compatibility:
-  wine: false
+backup:
+  save_dir: "/game/server/argonath"

@@ -11,12 +11,15 @@ Windows dedicated server running via Wine/Proton on Linux.
 
 ## Setup
 
-1. Copy `game.yml` to your Argonath `config/` folder
-2. Ensure GE-Proton is installed at the configured path
-3. Start the container - SteamCMD will download the server files via the Deploy button
+1. Use the `ghcr.io/meduseld-io/argonath:latest-wine` image in your `docker-compose.yml` (it adds Wine and Xvfb)
+2. Set `GAME=enshrouded` in your `docker-compose.yml` and run `docker compose up -d`
+3. Open the panel and click **Deploy** to download the server files via SteamCMD
 4. On first launch, a `enshrouded_server.json` config is generated
 5. Edit the config to set your server name, password, and settings
 6. Restart the server from the panel
+7. Click **Start**
+
+To change settings such as the server name, password or ports, create `config/game.yml` with `preset: enshrouded` and only the fields you want to change (for example `game:` → `args:`). It is applied on top of the built-in preset; see [game.yml](game.yml) for everything the preset sets.
 
 ## Configuration
 

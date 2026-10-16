@@ -1,24 +1,16 @@
 # Satisfactory Dedicated Server
+# The server is claimed and configured in-game on first connect (see README).
 game:
   name: "Satisfactory"
   steam_app_id: "1690800"
-  process_name: "FactoryServer"
-  launch_exe: "/game/FactoryServer.sh"
-  server_dir: "/game"
+  executable: "FactoryServer.sh"
+  process_name: "FactoryServer-Linux-Shipping"
+  args: ["-log", "-unattended"]
   log_file: "/game/FactoryGame/Saved/Logs/FactoryGame.log"
+  console_log: "/game/console.log"
   max_players: 4
+  port: 7777
+  port_protocol: "udp"
 
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
-
-steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true
-
-compatibility:
-  wine: false
+backup:
+  save_dir: "/game/.config/Epic/FactoryGame/Saved/SaveGames"

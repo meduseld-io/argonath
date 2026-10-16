@@ -1,6 +1,6 @@
 # Minecraft Java Edition
 
-Vanilla Minecraft server. Uses Mojang's version manifest API for automatic deploy and update detection - no SteamCMD needed. Java is included in the Docker image.
+Vanilla Minecraft server. Uses Mojang's version manifest API for automatic deploy and update detection - no SteamCMD needed. Deploy also downloads the Java runtime the release needs into `/game/jre`, so the base image stays small.
 
 ## Ports
 
@@ -11,12 +11,11 @@ Vanilla Minecraft server. Uses Mojang's version manifest API for automatic deplo
 
 ## Setup
 
-1. Copy `game.yml` to your Argonath `config/` folder
-2. Click **Deploy** in the panel - it will:
-   - Download the latest `server.jar` from Mojang
-   - Accept the EULA automatically
-   - Generate a `start.sh` script
-3. Click **Start** to launch the server
+1. Set `GAME=minecraft` in your `docker-compose.yml` and run `docker compose up -d`
+2. Open the panel and click **Deploy**. It downloads the latest `server.jar` from Mojang and the Java runtime it needs, and accepts the EULA
+3. Click **Start**
+
+To change settings such as the server name, password or ports, create `config/game.yml` with `preset: minecraft` and only the fields you want to change (for example `game:` → `args:`). It is applied on top of the built-in preset; see [game.yml](game.yml) for everything the preset sets.
 
 ## Update Detection
 
@@ -46,7 +45,7 @@ enable-rcon=false
 
 ## Memory
 
-The generated `start.sh` allocates 4GB max / 2GB min by default. Adjust `-Xmx` and `-Xms` in `start.sh` based on your available RAM:
+The preset allocates 4GB max / 1GB min. Adjust `-Xmx` and `-Xms` in `args` (in `config/game.yml`) based on your available RAM:
 
 - 1-5 players: 2-4GB
 - 5-10 players: 4-6GB
@@ -55,7 +54,7 @@ The generated `start.sh` allocates 4GB max / 2GB min by default. Adjust `-Xmx` a
 ## Notes
 
 - The EULA is auto-accepted during deploy
-- For modded servers (Forge/Fabric), replace `server.jar` manually and adjust `start.sh`
+- For modded servers (Forge/Fabric), replace `server.jar` manually and adjust `args`
 - World data is in the `world/` directory
 - Logs are in `logs/latest.log` (written by Minecraft); raw console output goes to `logs/console.log`
 - The process name is `server.jar` rather than `java`, so other Java processes are never matched (or killed)

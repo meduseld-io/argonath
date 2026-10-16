@@ -1,26 +1,22 @@
-# ARK: Survival Ascended Dedicated Server (Wine/Proton required)
+# ARK: Survival Ascended Dedicated Server (Windows-only, runs under Wine)
+# Needs the ghcr.io/meduseld-io/argonath:latest-wine image. Experimental.
 game:
   name: "ARK: Survival Ascended"
   steam_app_id: "2430930"
+  executable: "ShooterGame/Binaries/Win64/ArkAscendedServer.exe"
   process_name: "ArkAscendedServer.exe"
-  launch_script: "/game/start.sh"
-  server_dir: "/game"
+  args: ["TheIsland_WP?listen?SessionName=MyServer?ServerPassword=changeme?MaxPlayers=70",
+         "-server", "-log", "-NoBattlEye"]
   log_file: "/game/ShooterGame/Saved/Logs/ShooterGame.log"
+  console_log: "/game/console.log"
   max_players: 70
-  args: ["TheIsland_WP?listen?SessionName=MyServer?ServerPassword=changeme?MaxPlayers=70", "-server", "-log", "-NoBattlEye"]
+  port: 7777
+  port_protocol: "udp"
+  stop_timeout: 120
 
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
-
-steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true
+backup:
+  save_dir: "/game/ShooterGame/Saved"
 
 compatibility:
   wine: true
-  proton_version: "GE-Proton10-32"
+  # proton_version: "GE-Proton10-32"  # use GE-Proton instead of Wine if mounted at /compatibilitytools

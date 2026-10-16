@@ -1,25 +1,17 @@
 # Project Zomboid Dedicated Server
+# Server data goes in /game/Zomboid. Change -adminpassword before the first start.
 game:
   name: "Project Zomboid"
   steam_app_id: "380870"
+  executable: "start-server.sh"
   process_name: "ProjectZomboid64"
-  launch_script: "/game/start-server.sh"
-  server_dir: "/game"
+  args: ["-servername", "MyServer", "-adminpassword", "changeme", "-cachedir=/game/Zomboid"]
   log_file: "/game/Zomboid/server-console.txt"
+  console_log: "/game/console.log"
   max_players: 16
-  args: ["-servername", "MyServer"]
+  port: 16261
+  port_protocol: "udp"
+  stop_timeout: 90
 
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
-
-steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true
-
-compatibility:
-  wine: false
+backup:
+  save_dir: "/game/Zomboid/Saves"

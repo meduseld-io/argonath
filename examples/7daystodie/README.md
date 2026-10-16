@@ -14,11 +14,13 @@ Native Linux dedicated server managed via SteamCMD.
 
 ## Setup
 
-1. Copy `game.yml` to your Argonath `config/` folder
-2. Start the container - SteamCMD will download the server files automatically via the Deploy button
+1. Set `GAME=7daystodie` in your `docker-compose.yml` and run `docker compose up -d`
+2. Open the panel and click **Deploy** to download the server files via SteamCMD
 3. On first launch, a default `serverconfig.xml` is generated in the server directory
 4. Edit `serverconfig.xml` to set your server name, password, max players, and world settings
-5. Start the server from the panel
+5. Click **Start**
+
+To change settings such as the server name, password or ports, create `config/game.yml` with `preset: 7daystodie` and only the fields you want to change (for example `game:` → `args:`). It is applied on top of the built-in preset; see [game.yml](game.yml) for everything the preset sets.
 
 ## Configuration
 
@@ -33,5 +35,5 @@ The main config file is `serverconfig.xml` in the server root. Key settings:
 ## Notes
 
 - First startup takes a while as the server generates the world
-- The server writes logs to `7DaysToDieServer_Data/output_log.txt`
+- The server writes logs to `logs/output_log.txt`, and saves to `.local/share/7DaysToDie` in the game folder
 - EAC (Easy Anti-Cheat) is disabled by default on Linux dedicated servers

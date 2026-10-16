@@ -1,33 +1,49 @@
-# Argonath Game Server Configuration
-# Copy this file to game.yml and customize for your server.
+# Argonath game configuration (optional when using a built-in preset)
+#
+# Easiest: set GAME=<preset> in docker-compose.yml and skip this file.
+# To customise a preset, copy this file to config/game.yml, set `preset`,
+# and keep only the fields you want to change. They override the preset.
+
+preset: valheim
 
 game:
-  name: "My Game Server"
-  steam_app_id: ""                    # Steam app ID for the dedicated server
-  process_name: ""                    # Executable name to detect (e.g. "valheim_server.x86_64")
-  launch_script: "/game/start.sh"    # Path to launch script (preferred)
-  # launch_exe: "/game/server"       # Direct executable (fallback if no script)
-  server_dir: "/game"
-  log_file: ""                        # Path to the game's log file
-  max_players: 8
-  args: []                            # Additional launch arguments
+  # name: "My Game Server"
+  # steam_app_id: ""                  # SteamCMD app ID of the dedicated server
+  # executable: "MyServer.x86_64"     # Program to run, relative to server_dir
+  # process_name: "MyServer.x86_64"   # Text that identifies the running server process
+  # args: []                          # Arguments for the executable (replaces the preset's list)
+  # env: {}                           # Extra environment variables, e.g. LD_LIBRARY_PATH
+  # working_dir: ""                   # Folder to run in, relative to server_dir
+  # server_dir: "/game"
+  # log_file: ""                      # File shown in Server Logs (default: console_log)
+  # console_log: ""                   # Where console output goes (default: /game/console.log)
+  # launch_script: ""                 # Run this script instead of executable
+  # max_players: 8
   # port: 2456                        # Game port (otherwise parsed from args)
   # port_protocol: "udp"              # "udp" or "tcp"
+  # query_port: 27015                 # Steam query port for player count
   # stop_timeout: 60                  # Seconds to wait for a clean shutdown before force kill
+  # xvfb: false                       # Run under a virtual display (latest-wine image)
 
-server:
-  port: 5000
-  host: "0.0.0.0"
+# server:
+#   port: 5000
+#   host: "0.0.0.0"
 
-auth:
-  mode: "local"   # "local" (username/password), "none" (no auth, trusted network)
-  allow_registration: false   # Let new users sign up as viewers after the first admin
+# auth:
+#   mode: "local"                     # "local" (username/password), "none" (no auth, trusted network)
+#   allow_registration: false         # Let new users sign up as viewers after the first admin
 
-steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true   # Verify files on update
+# steamcmd:
+#   enabled: true
+#   install_dir: "/game"
+#   validate: true                    # Verify files on update
+#   platform: ""                      # "windows" for Windows-only servers (automatic with wine)
 
-compatibility:
-  wine: false
-  proton_version: ""   # e.g. "GE-Proton10-32"
+# backup:
+#   enabled: true
+#   save_dir: "/game/Saved"
+#   max_keep: 5
+
+# compatibility:
+#   wine: false                       # Run the executable with Wine (latest-wine image)
+#   proton_version: ""                # e.g. "GE-Proton10-32", mounted at /compatibilitytools

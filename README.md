@@ -12,7 +12,7 @@ Fills the gap between [Pterodactyl](https://pterodactyl.io/) (multi-server, mult
 - **Live system stats** - CPU, RAM, disk, temperature with 30-min history charts
 - **Player count** - Shows current players when detectable
 - **Server logs** - Real-time game server log viewer
-- **Startup logs** - Separate panel for launch script output
+- **Startup logs** - Separate panel for start, stop and crash events
 - **Activity log** - Tracks who did what and when
 - **Update detection** - SteamCMD build ID checking, one-click update on restart
 - **Health monitoring** - Server state detection (running/offline/crashed)
@@ -26,105 +26,122 @@ Fills the gap between [Pterodactyl](https://pterodactyl.io/) (multi-server, mult
 
 ## Quick Start
 
+On any Linux server with Docker:
+
 ```bash
-# 1. Create project directory
 mkdir argonath && cd argonath
-
-# 2. Create subdirectories
-mkdir -p config
-
-# 3. Create your config
-# Copy an example from the repo's examples/ folder into config/game.yml
-# Edit config/game.yml for your game
-
-# 4. Create docker-compose.yml (see Docker Compose section below)
-
-# 5. Run
+curl -fsSLO https://raw.githubusercontent.com/meduseld-io/argonath/main/docker-compose.yml
+# Edit GAME= in docker-compose.yml (valheim, palworld, minecraft, rust... see the list below)
 docker compose up -d
 ```
 
-Open `http://localhost:5000` - the first user to register becomes admin.
+Open `http://<your-server>:5000`. The first user to register becomes admin. Click **Deploy** to download the game server, then **Start**. That's it: no config files or start scripts to write.
 
-Click **Deploy** to download the game server via SteamCMD. Once complete, click **Start** to launch it. That's it.
+To change the server name, password or anything else, create `config/game.yml` with only what you want to change. It's applied on top of the built-in preset:
 
-> **Headless server?** If you're running on a remote Linux box without a desktop, access the panel from your local machine using an SSH tunnel: `ssh -L 5000:localhost:5000 user@your-server-ip`, then open `http://localhost:5000` in your local browser. Alternatively, put it behind a reverse proxy with a domain (see [Custom Domain](#custom-domain) below).
+```yaml
+preset: valheim
+game:
+  args: ["-name", "My Viking Server", "-port", "2456", "-world", "Midgard", "-password", "secret123",
+         "-savedir", "/game/saves", "-public", "1"]
+```
+
+Restart the container after editing it (`docker compose restart`).
+
+> **Headless server?** Access the panel from your own machine with an SSH tunnel: `ssh -L 5000:localhost:5000 user@your-server-ip`, then open `http://localhost:5000`. Or put it behind a reverse proxy with a domain (see [Custom Domain](#custom-domain) below).
+
+## Supported Games
+
+Each preset has a README in `examples/<name>/` with ports, setup steps and game-specific settings. Use the folder name as `GAME`.
+
+| Game | `GAME=` | Image | Notes |
+|------|---------|-------|-------|
+| 7 Days to Die | `7daystodie` | `latest` | |
+| Counter-Strike 2 | `csgo2` | `latest` | Needs a GSLT token |
+| Don't Starve Together | `dontstarvetogether` | `latest` | Needs a Klei cluster token |
+| Factorio | `factorio` | `latest` | Download the headless server once (not on SteamCMD) |
+| Left 4 Dead 2 | `left4dead2` | `latest` | |
+| Minecraft (Java) | `minecraft` | `latest` | Deploys via Mojang; Java is downloaded automatically |
+| Palworld | `palworld` | `latest` | |
+| Project Zomboid | `projectzomboid` | `latest` | |
+| Rust | `rust` | `latest` | |
+| Satisfactory | `satisfactory` | `latest` | |
+| Terraria | `terraria` | `latest` | Download the server once from terraria.org |
+| Unturned | `unturned` | `latest` | |
+| Valheim | `valheim` | `latest` | |
+| Core Keeper | `corekeeper` | `latest-wine` | Native, but needs Xvfb from the Wine image |
+| Enshrouded | `enshrouded` | `latest-wine` | Windows server under Wine |
+| V Rising | `vrising` | `latest-wine` | Windows server under Wine |
+| ARK: Survival Ascended | `ark-survival-ascended` | `latest-wine` | Windows server under Wine, experimental |
+| Conan Exiles | `conanexiles` | `latest-wine` | Windows server under Wine, experimental |
+| Icarus | `icarus` | `latest-wine` | Windows server under Wine, experimental |
+| Sons of the Forest | `theforest` | `latest-wine` | Windows server under Wine, experimental |
+
+### Images
+
+- `ghcr.io/meduseld-io/argonath:latest` - small image for native Linux servers (SteamCMD included)
+- `ghcr.io/meduseld-io/argonath:latest-wine` - adds Wine and Xvfb for Windows-only servers. Set `compatibility.proton_version` and mount GE-Proton at `/compatibilitytools` if you prefer Proton.
 
 ## What Happens Automatically
 
-After you click Deploy:
-
-- **SteamCMD** downloads and installs the game server files (bundled in the Docker image - no separate install needed)
-- **start.sh** is auto-generated for known games (Palworld, Valheim, Satisfactory) with output piped to `server.log`
-- **Game logs** are captured to the file specified by `log_file` in your `game.yml` via the generated start script
-- **Startup logs** track start/stop/crash events in `/data/startup.log` (internal, always works)
-- **Update detection** checks for new Steam builds every hour and shows an "Update Available" badge
-- **Process monitoring** detects crashes and updates the panel state automatically
-- **Backups** archive the configured `save_dir` to timestamped `.tar.gz` files in `/data/backups/`
-
-For unknown games, the generated `start.sh` contains a template you'll need to edit once with your server executable name.
+- **Deploy** downloads the game with SteamCMD (or Mojang for Minecraft, including a matching Java runtime)
+- **Start** launches the game's executable directly with the preset's arguments and environment. Its console output goes to `console_log`, which the panel shows when the game has no log file of its own
+- **Stop** asks the server to shut down cleanly so it can save, and force kills it only after `stop_timeout`
+- **Update detection** checks for new builds every hour, shows an "Update Available" badge, and updates on the next start or restart
+- **Process monitoring** detects crashes and updates the panel state
+- **Backups** archive `save_dir` to timestamped `.tar.gz` files in `/data/backups/`
+- **Files stay yours**: Argonath and the game run as `PUID`/`PGID` (default 1000), so `./game` on the host isn't owned by root
 
 ## Configuration
 
-All configuration lives in a single `config/game.yml` file:
+`config/game.yml` is optional when you use a preset. Everything you put in it overrides the preset (lists like `args` are replaced, not merged). To run a game that has no preset, write the whole file yourself:
 
 ```yaml
 game:
-  name: "Valheim"
-  steam_app_id: "896660"
-  process_name: "valheim_server.x86_64"
-  launch_script: "/game/start.sh"
-  server_dir: "/game"
+  name: "My Game"
+  steam_app_id: "123456"            # SteamCMD app ID of the dedicated server
+  executable: "MyServer.x86_64"     # relative to server_dir
+  process_name: "MyServer.x86_64"   # used to detect that the server is running
+  args: ["-port", "27015"]
+  env:
+    LD_LIBRARY_PATH: "./linux64:$LD_LIBRARY_PATH"
   log_file: "/game/server.log"
-  max_players: 10
-
-auth:
-  mode: "local"   # "local" or "none"
-
-steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true
+  port: 27015
+  port_protocol: "udp"
 
 backup:
-  enabled: true
-  save_dir: "/game/Saved"
-  max_keep: 5
-
-compatibility:
-  wine: false
+  save_dir: "/game/saves"
 ```
 
 ### Key Fields
 
 | Field | Purpose |
 |-------|---------|
-| `process_name` | The executable name psutil scans for to detect if the server is running |
-| `launch_script` | Path to the start script (auto-generated on deploy for known games) |
-| `log_file` | Where game server output is written - the panel's "Server Logs" reads this file |
-| `save_dir` | Directory to archive when you click Backup |
-| `steam_app_id` | Used by SteamCMD for deploy and update checks |
-| `port` / `port_protocol` | Game port and `udp`/`tcp` for the "Port open" check and the address shown in the panel. Optional; otherwise parsed from `args` (`-port=N`, `-port N`, `+server.port N`) |
+| `preset` | Built-in game preset to start from (same as the `GAME` environment variable) |
+| `executable` | Program Argonath runs, relative to `server_dir` (default `/game`) |
+| `args` | Arguments passed to the executable |
+| `env` | Extra environment variables. `$VAR` refers to the existing value |
+| `working_dir` | Folder to run in, relative to `server_dir` (default: `server_dir`) |
+| `process_name` | Text in the command line that identifies the running server process |
+| `log_file` | File shown in the panel's Server Logs. Defaults to `console_log` |
+| `console_log` | Where the game's console output is written (default `<server_dir>/console.log`) |
+| `xvfb` | Run under a virtual display (needs the `latest-wine` image) |
+| `launch_script` | Run this script instead of `executable` (for custom setups) |
+| `steam_app_id` | SteamCMD app ID for deploy and update checks |
+| `port` / `port_protocol` | Game port and `udp`/`tcp` for the "Port open" check and the address shown in the panel. Otherwise parsed from `args` (`-port=N`, `-port N`, `+server.port N`) |
+| `query_port` | Steam query port used for the player count (default `27015`) |
 | `stop_timeout` | Seconds Stop/Restart wait for the server to save and exit before force killing it (default `60`) |
+| `backup.save_dir` | Directory to archive when you click Backup |
+| `steamcmd.platform` | `windows` to download Windows builds (set automatically when `compatibility.wine` is on) |
+| `compatibility.wine` | Run the executable with Wine (needs the `latest-wine` image) |
+| `auth.allow_registration` | Let more people sign up as viewers after the first admin (default `false`) |
 
 ### How Logs Work
 
 Argonath has two log panels:
 
-- **Server Logs** - reads the file at `log_file` in your `game.yml`. The auto-generated `start.sh` redirects game server stdout/stderr to this file. If you write your own start script, make sure it writes output to this path, and use `exec` for the server command so Stop can signal it directly. The start script's own output is kept in `/data/launcher.log` (useful when a launch fails).
-- **Startup Logs** - tracks lifecycle events (start, stop, crash, kill) in `/data/startup.log`. This is managed internally by Argonath and always works.
-
-## Example Configs
-
-The `examples/` directory includes ready-to-use configurations for 20 games, each with a README covering ports, setup steps, and configuration:
-
-**Native Linux:**
-Valheim, Satisfactory, Palworld, Project Zomboid, Terraria, Rust, 7 Days to Die, Counter-Strike 2, Core Keeper, Left 4 Dead 2, Don't Starve Together, Unturned
-
-**Wine/Proton required:**
-Icarus, Enshrouded, V Rising, ARK: Survival Ascended, Sons of the Forest, Conan Exiles
-
-**Non-Steam (no SteamCMD):**
-Minecraft (Java) - auto-deploys via Mojang API, Factorio
+- **Server Logs** - shows `log_file`. For most games that's the console output Argonath captures; for games that write their own log (Minecraft, Unreal and Unity servers), the preset points it at that file.
+- **Startup Logs** - lifecycle events (start, stop, crash, kill) in `/data/startup.log`. If a start fails, the reason is here.
 
 ## Docker Compose
 
@@ -133,14 +150,15 @@ services:
   argonath:
     image: ghcr.io/meduseld-io/argonath:latest
     container_name: argonath
-    ports:
-      - "5000:5000"
-    # pid: host  # Uncomment to monitor a game server running outside the container
+    network_mode: host
     volumes:
       - ./game:/game
       - ./config:/config
       - argonath-data:/data
     environment:
+      - GAME=valheim
+      - PUID=1000
+      - PGID=1000
       - TZ=America/New_York
     restart: unless-stopped
 
@@ -148,12 +166,16 @@ volumes:
   argonath-data:
 ```
 
-> **Already have a game server running?** If you want Argonath to monitor an existing server process (not launched by Argonath), add `pid: host` to the compose file and mount the real game directory instead of `./game`. This lets psutil see host processes.
+`network_mode: host` makes the game's ports reachable without listing them and lets Steam's server browser find the server. Remember to open the game's ports in your firewall (each game README lists them). If you'd rather use Docker's bridge network, replace `network_mode: host` with a `ports:` list containing `5000:5000` and the game's ports from its README, e.g. `- "2456-2457:2456-2457/udp"` for Valheim.
+
+> **Already have a game server running?** To monitor a server process that Argonath didn't launch, add `pid: host` to the compose file and mount the real game directory instead of `./game`.
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `GAME` | (none) | Built-in preset to use, e.g. `valheim` |
+| `PUID` / `PGID` | `1000` | User and group the panel and game run as. Use `id` on the host to find yours; `0` runs as root |
 | `TZ` | `UTC` | Timezone |
 | `SECRET_KEY` | (generated) | Flask session secret. If unset, a random key is generated and saved to `/data/secret_key` |
 | `IDLE_SHUTDOWN_MINUTES` | `0` | Auto-stop after N minutes with 0 players (0 = disabled) |
@@ -243,14 +265,14 @@ POST requests must include the header `X-Requested-With: argonath` (the panel ad
 
 ```
 docker container
-├── Flask app (port 5000)
+├── Flask app served by waitress (port 5000)
 │   ├── Web UI (gridstack.js dashboard)
 │   ├── Process manager (subprocess + psutil)
 │   ├── Stats collector (background thread)
 │   └── SQLite database (users, activity log)
 └── volumes
     ├── /game    → game server files
-    ├── /config  → game.yml
+    ├── /config  → game.yml (optional overrides)
     └── /data    → SQLite DB, logs, backups
 ```
 

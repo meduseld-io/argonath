@@ -1,27 +1,21 @@
 # Minecraft Java Edition Server
-# Deploy downloads the latest server.jar from Mojang automatically.
-# Update detection checks for new Minecraft releases every hour.
+# Deploy downloads the latest server.jar from Mojang plus the Java runtime it
+# needs. Update detection checks for new Minecraft releases every hour.
 game:
   name: "Minecraft"
-  steam_app_id: ""
+  executable: "jre/bin/java"
   process_name: "server.jar"
-  launch_script: "/game/start.sh"
-  server_dir: "/game"
-  log_file: "/game/logs/latest.log"
+  # Raise -Xmx (max memory) for more players or mods
+  args: ["-Xmx4G", "-Xms1G", "-jar", "server.jar", "nogui"]
+  log_file: "/game/logs/latest.log"     # written by Minecraft itself
+  console_log: "/game/logs/console.log"
   max_players: 20
   port: 25565
   port_protocol: "tcp"
-  args: []
-
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
+  stop_timeout: 90
 
 steamcmd:
   enabled: false
 
-compatibility:
-  wine: false
+backup:
+  save_dir: "/game/world"

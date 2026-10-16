@@ -1,25 +1,16 @@
-# Terraria Dedicated Server (tModLoader compatible)
+# Terraria Dedicated Server (not on anonymous SteamCMD - download it once, see README)
 game:
   name: "Terraria"
-  steam_app_id: "105600"
+  executable: "TerrariaServer.bin.x86_64"
   process_name: "TerrariaServer"
-  launch_script: "/game/start.sh"
-  server_dir: "/game"
-  log_file: "/game/logs/server.log"
-  max_players: 8
   args: ["-config", "/game/serverconfig.txt"]
-
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
+  log_file: "/game/console.log"
+  max_players: 8
+  port: 7777
+  port_protocol: "tcp"
 
 steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true
+  enabled: false
 
-compatibility:
-  wine: false
+backup:
+  save_dir: "/game/Worlds"

@@ -1,25 +1,18 @@
 # Core Keeper Dedicated Server
+# Native Linux, but the server needs a virtual display (Xvfb), which is in the
+# ghcr.io/meduseld-io/argonath:latest-wine image.
 game:
   name: "Core Keeper"
   steam_app_id: "1963720"
+  executable: "CoreKeeperServer"
   process_name: "CoreKeeperServer"
-  launch_exe: "/game/CoreKeeperServer"
-  server_dir: "/game"
-  log_file: "/game/CoreKeeper/logs/CoreKeeperServer.log"
+  xvfb: true
+  env:
+    LD_LIBRARY_PATH: ".:$LD_LIBRARY_PATH"
+  args: ["-batchmode", "-logfile", "/game/logs/CoreKeeperServer.log", "-datapath", "/game/data"]
+  log_file: "/game/logs/CoreKeeperServer.log"
+  console_log: "/game/logs/console.log"
   max_players: 8
-  args: ["-batchmode", "-logfile", "/game/CoreKeeper/logs/CoreKeeperServer.log"]
 
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
-
-steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true
-
-compatibility:
-  wine: false
+backup:
+  save_dir: "/game/data"

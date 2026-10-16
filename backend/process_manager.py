@@ -4,6 +4,8 @@ Handles starting, stopping, killing, and monitoring the game server process.
 """
 
 import os
+import re
+import shutil
 import signal
 import socket
 import subprocess
@@ -16,7 +18,14 @@ import psutil
 from config import (
     PROCESS_NAME,
     LAUNCH_SCRIPT,
-    LAUNCH_EXE,
+    EXECUTABLE,
+    WORKING_DIR,
+    GAME_ENV,
+    USE_XVFB,
+    CONSOLE_LOG,
+    PROTON_VERSION,
+    PROTON_DIR,
+    STEAMCMD_PATH,
     SERVER_DIR,
     SERVER_ARGS,
     LOG_FILE,
@@ -50,6 +59,12 @@ _usage_procs = {}
 # A2S backoff: skip querying for a while after a timeout so /api/stats stays fast
 _A2S_BACKOFF = 60
 _a2s_skip_until = 0
+
+# Shells: a script run as "bash ./start.sh" is a wrapper, never the game itself
+_SHELLS = {"sh", "bash", "dash"}
+
+# Rotate the console log on launch once it grows past this size
+CONSOLE_LOG_MAX_BYTES = 20 * 1024 * 1024
 
 # Process names that wrap the real game process and must never be matched
 _WRAPPER_NAMES = {
@@ -99,6 +114,8 @@ def find_server_processes():
                 cmdline = proc.info["cmdline"]
                 if not cmdline or proc.info["name"] in _WRAPPER_NAMES:
                     continue
+                if os.path.basename(str(cmdline[0])) in _SHELLS:
+                    continue
                 if proc.pid == os.getpid():
                     continue
                 if PROCESS_NAME in " ".join(str(arg) for arg in cmdline):
@@ -115,71 +132,179 @@ def is_running():
     return bool(find_server_processes())
 
 
-def launch_server():
-    """Launch the game server process"""
-    global _launcher
+def _game_env():
+    """Environment for the game process"""
+    env = dict(os.environ)
+    # Games keep per-user data under $HOME (~/.klei, ~/Zomboid, ~/.steam), so
+    # point it at the game directory where it's persisted and backed up
+    env["HOME"] = SERVER_DIR
+    # Java downloaded on deploy (Minecraft) lives in <server_dir>/jre
+    env["PATH"] = os.path.join(SERVER_DIR, "jre", "bin") + os.pathsep + env.get("PATH", "")
+    if WINE_ENABLED:
+        env.setdefault("WINEPREFIX", os.path.join(SERVER_DIR, ".wine"))
+        env.setdefault("WINEDEBUG", "-all")
+        env.setdefault("WINEARCH", "win64")
+    # Values may reference other variables, e.g. "./linux64:$LD_LIBRARY_PATH"
+    for key, value in GAME_ENV.items():
+        env[key] = re.sub(
+            r"\$\{?(\w+)\}?", lambda m: env.get(m.group(1), ""), value
+        ).strip(":")
+    return env
+
+
+def _link_steamclient():
+    """Many Steam servers look for steamclient.so in ~/.steam/sdk64 (or sdk32)"""
+    steamcmd_dir = os.path.dirname(STEAMCMD_PATH)
+    for sdk, lib in (("sdk64", "linux64"), ("sdk32", "linux32")):
+        source = os.path.join(steamcmd_dir, lib, "steamclient.so")
+        target = os.path.join(SERVER_DIR, ".steam", sdk, "steamclient.so")
+        if os.path.exists(source) and not os.path.lexists(target):
+            try:
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                os.symlink(source, target)
+            except OSError as e:
+                logger.debug(f"Could not link steamclient.so: {e}")
+
+
+def _rotate_console_log():
+    """Keep one previous console log once the current one gets large"""
     try:
-        script = LAUNCH_SCRIPT or LAUNCH_EXE
-        if not script:
-            raise ValueError("No launch_script or launch_exe configured in game.yml")
+        if os.path.getsize(CONSOLE_LOG) > CONSOLE_LOG_MAX_BYTES:
+            os.replace(CONSOLE_LOG, CONSOLE_LOG + ".1")
+    except OSError:
+        pass
 
-        if not os.path.exists(script):
-            raise FileNotFoundError(f"Launch script not found: {script}")
 
-        # Ensure script is executable
+def build_command():
+    """Build the command line for `executable` + `args`, wrapped in Wine/Proton/Xvfb as configured"""
+    exe = EXECUTABLE if os.path.isabs(EXECUTABLE) else os.path.join(SERVER_DIR, EXECUTABLE)
+    if not os.path.exists(exe):
+        raise FileNotFoundError(f"Executable not found: {exe} (has the server been deployed?)")
+
+    cmd = [exe] + SERVER_ARGS
+
+    if WINE_ENABLED:
+        proton = os.path.join(PROTON_DIR, PROTON_VERSION, "proton") if PROTON_VERSION else ""
+        if proton and os.path.exists(proton):
+            cmd = [proton, "run"] + cmd
+        else:
+            wine = shutil.which("wine") or shutil.which("wine64")
+            if not wine:
+                raise RuntimeError(
+                    "This game needs Wine, which isn't in this image. "
+                    "Use the ghcr.io/meduseld-io/argonath:latest-wine image."
+                )
+            cmd = [wine] + cmd
+    elif not os.access(exe, os.X_OK):
         try:
-            os.chmod(script, 0o755)
-        except Exception as e:
-            logger.warning(f"Could not set execute permission: {e}")
+            os.chmod(exe, 0o755)
+        except OSError as e:
+            logger.warning(f"Could not set execute permission on {exe}: {e}")
 
-        # Ensure log file parent directory exists
-        if LOG_FILE:
-            log_dir = os.path.dirname(LOG_FILE)
-            if log_dir:
-                os.makedirs(log_dir, exist_ok=True)
+    if USE_XVFB or WINE_ENABLED:
+        xvfb = shutil.which("xvfb-run")
+        if xvfb:
+            cmd = [xvfb, "-a"] + cmd
+        elif USE_XVFB:
+            raise RuntimeError(
+                "This game needs Xvfb, which isn't in this image. "
+                "Use the ghcr.io/meduseld-io/argonath:latest-wine image."
+            )
 
-        # Kill stale tmux session if it exists
-        try:
-            tmux_check = subprocess.run(
-                ["tmux", "has-session", "-t", "gameserver"],
+    return cmd
+
+
+def _kill_stale_tmux():
+    """Kill a leftover tmux session from a previous launch script"""
+    try:
+        tmux_check = subprocess.run(
+            ["tmux", "has-session", "-t", "gameserver"],
+            capture_output=True, timeout=5,
+        )
+        if tmux_check.returncode == 0:
+            logger.warning("Stale tmux session found - killing it")
+            subprocess.run(
+                ["tmux", "kill-session", "-t", "gameserver"],
                 capture_output=True, timeout=5,
             )
-            if tmux_check.returncode == 0:
-                logger.warning("Stale tmux session found - killing it")
-                subprocess.run(
-                    ["tmux", "kill-session", "-t", "gameserver"],
-                    capture_output=True, timeout=5,
+    except Exception as e:
+        logger.debug(f"tmux check: {e}")
+
+
+def launch_server():
+    """Launch the game server process.
+
+    Uses launch_script if one is configured, otherwise runs `executable`
+    with `args` directly (no start script needed).
+    """
+    global _launcher
+    try:
+        if not LAUNCH_SCRIPT and not EXECUTABLE:
+            raise ValueError("No executable or launch_script configured in game.yml")
+
+        for path in (LOG_FILE, CONSOLE_LOG):
+            if path and os.path.dirname(path):
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+
+        _kill_stale_tmux()
+        _link_steamclient()
+        env = _game_env()
+
+        if LAUNCH_SCRIPT:
+            script = LAUNCH_SCRIPT
+            if not os.path.exists(script):
+                raise FileNotFoundError(f"Launch script not found: {script}")
+            try:
+                os.chmod(script, 0o755)
+            except Exception as e:
+                logger.warning(f"Could not set execute permission: {e}")
+
+            cwd = os.path.dirname(os.path.abspath(script))
+            logger.info(f"Launching script: {script}")
+            proc = subprocess.Popen(
+                ["bash", script],
+                cwd=cwd,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+            # The pipe must always be drained: once its buffer fills, the game
+            # blocks writing to its console and freezes.
+            threading.Thread(
+                target=_drain_launcher_output, args=(proc.stdout,), daemon=True,
+            ).start()
+            output_file = LAUNCHER_LOG
+        else:
+            cmd = build_command()
+            cwd = os.path.join(SERVER_DIR, WORKING_DIR) if WORKING_DIR else SERVER_DIR
+            logger.info(f"Launching: {' '.join(cmd)} (in {cwd})")
+            _rotate_console_log()
+            with open(CONSOLE_LOG, "ab") as out:
+                proc = subprocess.Popen(
+                    cmd,
+                    cwd=cwd,
+                    env=env,
+                    # Keep stdin open (never written): some servers exit or spin
+                    # when their console input hits end-of-file
+                    stdin=subprocess.PIPE,
+                    stdout=out,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=True,
                 )
-        except Exception as e:
-            logger.debug(f"tmux check: {e}")
+            output_file = CONSOLE_LOG
 
-        # Launch
-        cwd = os.path.dirname(os.path.abspath(script)) if os.path.dirname(script) else SERVER_DIR
-        logger.info(f"Launching: {script}")
-
-        proc = subprocess.Popen(
-            ["bash", script],
-            cwd=cwd,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
-        )
         _launcher = proc
-        # The pipe must always be drained: once its buffer fills, the game
-        # blocks writing to its console and freezes.
-        threading.Thread(
-            target=_drain_launcher_output, args=(proc.stdout,), daemon=True,
-        ).start()
-        logger.info(f"Launch script started (PID {proc.pid})")
+        logger.info(f"Server process started (PID {proc.pid})")
 
-        # Quick check if it died immediately. Exit code 0 is fine: some scripts
-        # start the server detached (e.g. in tmux) and return straight away.
+        # Quick check if it died immediately. Exit code 0 is fine for scripts
+        # that start the server detached (e.g. in tmux) and return straight away.
         time.sleep(2)
         if proc.poll() is not None and proc.returncode != 0:
-            logger.error(f"Launch script exited immediately (code {proc.returncode})")
-            logger.error(f"Output: {_tail_file(LAUNCHER_LOG)}")
-            raise RuntimeError(f"Launch script exited with code {proc.returncode}")
+            logger.error(f"Server exited immediately (code {proc.returncode})")
+            logger.error(f"Output: {_tail_file(output_file)}")
+            raise RuntimeError(f"Server exited with code {proc.returncode}, see {output_file}")
 
     except Exception as e:
         logger.error(f"Failed to launch server: {e}")
@@ -220,6 +345,11 @@ def _reap_launcher():
     """Collect the launcher's exit status so it doesn't linger as a zombie"""
     global _launcher
     if _launcher is not None and _launcher.poll() is not None:
+        if _launcher.stdin:
+            try:
+                _launcher.stdin.close()
+            except OSError:
+                pass
         _launcher = None
 
 

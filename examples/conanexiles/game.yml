@@ -1,26 +1,21 @@
-# Conan Exiles Dedicated Server (Wine/Proton required)
+# Conan Exiles Dedicated Server (Windows-only, runs under Wine)
+# Needs the ghcr.io/meduseld-io/argonath:latest-wine image. Experimental.
 game:
   name: "Conan Exiles"
   steam_app_id: "443030"
-  process_name: "ConanSandboxServer.exe"
-  launch_script: "/game/start.sh"
-  server_dir: "/game"
-  log_file: "/game/ConanSandbox/Saved/Logs/ConanSandbox.log"
-  max_players: 40
+  executable: "ConanSandbox/Binaries/Win64/ConanSandboxServer-Win64-Shipping.exe"
+  process_name: "ConanSandboxServer"
   args: ["-log", "-MaxPlayers=40"]
+  log_file: "/game/ConanSandbox/Saved/Logs/ConanSandbox.log"
+  console_log: "/game/console.log"
+  max_players: 40
+  port: 7777
+  port_protocol: "udp"
+  query_port: 27015
+  stop_timeout: 120
 
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
-
-steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true
+backup:
+  save_dir: "/game/ConanSandbox/Saved"
 
 compatibility:
   wine: true
-  proton_version: "GE-Proton10-32"

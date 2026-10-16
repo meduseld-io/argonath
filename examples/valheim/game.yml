@@ -1,25 +1,20 @@
 # Valheim Dedicated Server
+# Change the server name, world and password in args (password needs 5+ characters).
 game:
   name: "Valheim"
   steam_app_id: "896660"
+  executable: "valheim_server.x86_64"
   process_name: "valheim_server.x86_64"
-  launch_script: "/game/start.sh"
-  server_dir: "/game"
+  env:
+    LD_LIBRARY_PATH: "./linux64:$LD_LIBRARY_PATH"
+    SteamAppId: "892970"
+  args: ["-name", "MyServer", "-port", "2456", "-world", "Dedicated", "-password", "changeme",
+         "-savedir", "/game/saves", "-public", "1"]
   log_file: "/game/server.log"
   max_players: 10
-  args: ["-name", "MyServer", "-port", "2456", "-world", "Dedicated", "-password", "changeme"]
+  port: 2456
+  port_protocol: "udp"
+  query_port: 2457
 
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
-
-steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true
-
-compatibility:
-  wine: false
+backup:
+  save_dir: "/game/saves"

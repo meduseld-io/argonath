@@ -11,18 +11,20 @@ Windows dedicated server running via Wine/Proton on Linux.
 
 ## Setup
 
-1. Copy `game.yml` to your Argonath `config/` folder
-2. Ensure GE-Proton is installed at the configured path
-3. Start the container - SteamCMD will download the server files via the Deploy button
-4. Edit args in `game.yml` to set your server name and save name
-5. Start the server from the panel
+1. Use the `ghcr.io/meduseld-io/argonath:latest-wine` image in your `docker-compose.yml` (it adds Wine and Xvfb)
+2. Set `GAME=vrising` in your `docker-compose.yml` and run `docker compose up -d`
+3. Open the panel and click **Deploy** to download the server files via SteamCMD
+4. Set your server name and save name in `args` (see Configuration below)
+5. Click **Start**
+
+To change settings such as the server name, password or ports, create `config/game.yml` with `preset: vrising` and only the fields you want to change (for example `game:` → `args:`). It is applied on top of the built-in preset; see [game.yml](game.yml) for everything the preset sets.
 
 ## Configuration
 
 Server settings are split across launch args and JSON config files:
 
 Launch args in `game.yml`:
-- `-persistenceDataPath "/game/save-data"` - save location
+- `-persistentDataPath "/game/save-data"` - save location
 - `-serverName "MyServer"` - display name
 - `-saveName "world1"` - save file name
 

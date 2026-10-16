@@ -22,6 +22,8 @@ from config import (
     UPDATE_CHECK_INTERVAL,
     GAME_NAME,
     SERVER_DIR,
+    STEAMCMD_PLATFORM,
+    DATA_DIR,
 )
 from minecraft import is_minecraft
 
@@ -40,6 +42,31 @@ def _init_build_id():
     """Load the stored build ID on startup"""
     global current_build_id
     current_build_id = get_current_build_id()
+
+
+def steamcmd_command():
+    """SteamCMD command line to install or update the game server"""
+    cmd = [STEAMCMD_PATH]
+    if STEAMCMD_PLATFORM:
+        # Windows-only servers (run under Wine) need the Windows depot
+        cmd += ["+@sSteamCmdForcePlatformType", STEAMCMD_PLATFORM]
+    cmd += [
+        "+force_install_dir", STEAMCMD_INSTALL_DIR,
+        "+login", "anonymous",
+        "+app_update", STEAM_APP_ID,
+    ]
+    if STEAMCMD_VALIDATE:
+        cmd.append("validate")
+    cmd.append("+quit")
+    return cmd
+
+
+def steamcmd_env():
+    """Keep SteamCMD's own files (~/Steam, ~/.steam) out of the game directory"""
+    env = dict(os.environ)
+    env["HOME"] = os.path.join(DATA_DIR, "steam")
+    os.makedirs(env["HOME"], exist_ok=True)
+    return env
 
 
 def get_current_build_id():
@@ -162,20 +189,10 @@ def run_update():
         return False
 
     try:
-        # Build SteamCMD command
-        cmd = [
-            STEAMCMD_PATH,
-            "+force_install_dir", STEAMCMD_INSTALL_DIR,
-            "+login", "anonymous",
-            "+app_update", STEAM_APP_ID,
-        ]
-        if STEAMCMD_VALIDATE:
-            cmd.append("validate")
-        cmd.append("+quit")
-
         logger.info(f"Running SteamCMD update for app {STEAM_APP_ID}")
         result = subprocess.run(
-            cmd,
+            steamcmd_command(),
+            env=steamcmd_env(),
             timeout=UPDATE_TIMEOUT,
             capture_output=True,
             text=True,
@@ -215,7 +232,7 @@ def _run_minecraft_update():
     """Download the latest Minecraft server.jar."""
     global last_update_status, last_update_time, last_update_output, current_build_id
 
-    from minecraft import get_latest_release_info, download_server_jar
+    from minecraft import get_latest_release_info, download_server_jar, ensure_java
 
     try:
         version_id, jar_url = get_latest_release_info()
@@ -224,7 +241,7 @@ def _run_minecraft_update():
             last_update_time = time.time()
             return False
 
-        success = download_server_jar(jar_url, SERVER_DIR)
+        success = download_server_jar(jar_url, SERVER_DIR) and ensure_java(SERVER_DIR, version_id)
         last_update_time = time.time()
 
         if success:
