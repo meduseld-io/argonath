@@ -20,9 +20,9 @@ GAME_DIR = os.environ.get("ARGONATH_GAME_DIR", "/game")
 # If running locally (not in Docker), use project-relative paths
 if not os.path.isdir(CONFIG_DIR):
     CONFIG_DIR = os.path.join(_project_root, "config")
-if not os.path.isdir("/data"):
+if not os.path.isdir(DATA_DIR) and "ARGONATH_DATA_DIR" not in os.environ:
     DATA_DIR = os.path.join(_project_root, "data")
-if not os.path.isdir("/game"):
+if not os.path.isdir(GAME_DIR) and "ARGONATH_GAME_DIR" not in os.environ:
     GAME_DIR = os.path.join(_project_root, "game")
 
 CONFIG_FILE = os.path.join(CONFIG_DIR, "game.yml")
@@ -52,7 +52,13 @@ SERVER_DIR = _game.get("server_dir", GAME_DIR)
 LOG_FILE = _game.get("log_file", "")
 MAX_PLAYERS = _game.get("max_players", 8)
 QUERY_PORT = int(_game.get("query_port", 27015))
-SERVER_ARGS = _game.get("args", [])
+SERVER_ARGS = [str(a) for a in (_game.get("args") or [])]
+# Game port shown in the panel and used for the "port open" check.
+# Falls back to parsing SERVER_ARGS when not set.
+GAME_PORT = int(_game["port"]) if _game.get("port") else None
+GAME_PORT_PROTOCOL = str(_game.get("port_protocol", "")).lower()  # "udp", "tcp" or "" (auto)
+# Seconds to wait for the server to shut down cleanly before force killing
+STOP_TIMEOUT = int(_game.get("stop_timeout", 60))
 
 # ================= SERVER SETTINGS =================
 _server = _config.get("server", {})
@@ -63,7 +69,9 @@ FLASK_PORT = int(_server.get("port", 5000))
 # ================= AUTH SETTINGS =================
 _auth = _config.get("auth", {})
 
-AUTH_MODE = _auth.get("mode", "local")  # "local", "none", or "oidc"
+AUTH_MODE = _auth.get("mode", "local")  # "local" or "none"
+# Allow new accounts (as viewers) after the first admin has registered
+ALLOW_REGISTRATION = bool(_auth.get("allow_registration", False))
 
 # ================= STEAMCMD SETTINGS =================
 _steamcmd = _config.get("steamcmd", {})
@@ -84,7 +92,6 @@ RATE_LIMIT_WINDOW = 60  # seconds
 RATE_LIMIT_MAX_REQUESTS = 10
 RESTART_COOLDOWN = 30  # seconds between restarts
 START_TIMEOUT = 120  # seconds to wait for server to start
-STOP_TIMEOUT = 30  # seconds to wait for graceful shutdown
 UPDATE_TIMEOUT = 600  # seconds to wait for update
 
 # Monitoring intervals
@@ -118,7 +125,31 @@ VERSION_FILE = os.path.join(DATA_DIR, "build_id.txt")
 STARTUP_LOG = os.path.join(DATA_DIR, "startup.log")
 
 # ================= SECRETS =================
-SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-production")
+def _load_secret_key():
+    """Use SECRET_KEY from the environment, or generate one and persist it in DATA_DIR"""
+    key = os.environ.get("SECRET_KEY")
+    if key:
+        return key
+
+    key_file = os.path.join(DATA_DIR, "secret_key")
+    try:
+        with open(key_file, "r") as f:
+            key = f.read().strip()
+        if key:
+            return key
+    except FileNotFoundError:
+        pass
+
+    import secrets
+    key = secrets.token_hex(32)
+    os.makedirs(DATA_DIR, exist_ok=True)
+    fd = os.open(key_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(key)
+    return key
+
+
+SECRET_KEY = _load_secret_key()
 
 # ================= LOGGING =================
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")

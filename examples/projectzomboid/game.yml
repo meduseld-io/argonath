@@ -2,7 +2,7 @@
 game:
   name: "Project Zomboid"
   steam_app_id: "380870"
-  process_name: "java"
+  process_name: "ProjectZomboid64"
   launch_script: "/game/start-server.sh"
   server_dir: "/game"
   log_file: "/game/Zomboid/server-console.txt"

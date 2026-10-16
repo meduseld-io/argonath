@@ -40,4 +40,4 @@ Key server settings:
 - The server generates its admin password on first run - check the console output
 - Workshop mods are supported via `WorkshopItems=` in the server config
 - Save data is in `Zomboid/Saves/Multiplayer/`
-- The process name is `java` since PZ runs on the JVM
+- The process name is `ProjectZomboid64` (the native launcher that hosts the JVM). Matching `java` would also match any other Java process the panel can see

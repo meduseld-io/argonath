@@ -41,7 +41,9 @@
             <button type="submit" class="btn btn-primary">Log In</button>
         </form>
 
+        {% if registration_open %}
         <p class="auth-link">No account? <a href="/register">Register</a></p>
+        {% endif %}
     </div>
 </body>
 </html>

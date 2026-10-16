@@ -6,4 +6,5 @@
 cd /game
 mkdir -p /game/logs
 
-exec java -Xmx4G -Xms2G -jar server.jar nogui 2>&1 | tee -a /game/logs/latest.log
+# Minecraft writes logs/latest.log itself; console output goes to a separate file
+exec java -Xmx4G -Xms2G -jar server.jar nogui >> /game/logs/console.log 2>&1

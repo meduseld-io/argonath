@@ -6,6 +6,7 @@ SQLite-backed user accounts and activity logging.
 import sqlite3
 import os
 import hashlib
+import hmac
 import secrets
 from datetime import datetime
 
@@ -58,7 +59,7 @@ def verify_password(password, password_hash):
     try:
         salt, hashed = password_hash.split(":")
         check = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000)
-        return check.hex() == hashed
+        return hmac.compare_digest(check.hex(), hashed)
     except Exception:
         return False
 

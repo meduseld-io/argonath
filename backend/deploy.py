@@ -10,6 +10,7 @@ import time
 import logging
 
 import re
+import shlex
 
 from config import (
     STEAM_APP_ID,
@@ -43,9 +44,14 @@ def is_deployed():
         return False
 
     entries = os.listdir(SERVER_DIR)
-    # Filter out common empty-state files
-    meaningful = [e for e in entries if e not in [".gitkeep", ".gitignore", "start.sh"]]
-    return len(meaningful) > 1
+    # Filter out files that exist before (or without) an actual install
+    ignored = {".gitkeep", ".gitignore", "start.sh", "server.log", "logs"}
+    if LOG_FILE:
+        ignored.add(os.path.basename(LOG_FILE))
+    if LAUNCH_SCRIPT:
+        ignored.add(os.path.basename(LAUNCH_SCRIPT))
+    meaningful = [e for e in entries if e not in ignored]
+    return len(meaningful) > 0
 
 
 def start_deploy():
@@ -153,16 +159,22 @@ def _generate_start_script():
         logger.info(f"Deploy: start.sh already exists at {script_path}")
         return
 
-    # Build args string
-    args_str = " ".join(SERVER_ARGS) if SERVER_ARGS else ""
+    # Build args string (quoted so values with spaces survive)
+    args_str = " ".join(shlex.quote(a) for a in SERVER_ARGS) if SERVER_ARGS else ""
 
     # Detect the correct executable
     game_lower = GAME_NAME.lower()
 
+    env = ""
     if "palworld" in game_lower:
         exe = "./PalServer.sh"
     elif "valheim" in game_lower:
         exe = "./valheim_server.x86_64"
+        # Valheim needs its bundled Steam libraries and the client app ID
+        env = (
+            f'export LD_LIBRARY_PATH="{SERVER_DIR}/linux64:$LD_LIBRARY_PATH"\n'
+            "export SteamAppId=892970\n"
+        )
     elif "satisfactory" in game_lower:
         exe = "./FactoryServer.sh"
     else:
@@ -172,20 +184,23 @@ def _generate_start_script():
     from config import LOG_FILE
     log_path = LOG_FILE or os.path.join(SERVER_DIR, "server.log")
 
+    # exec so the game replaces the shell and receives stop signals directly
     if exe:
         content = (
             f"#!/bin/bash\n"
+            f"{env}"
             f"cd {SERVER_DIR}\n"
-            f"mkdir -p $(dirname {log_path})\n"
-            f"{exe} {args_str} 2>&1 | tee -a {log_path}\n"
+            f"mkdir -p \"$(dirname {log_path})\"\n"
+            f"exec {exe} {args_str} >> {log_path} 2>&1\n"
         )
     else:
         content = (
             f"#!/bin/bash\n"
             f"cd {SERVER_DIR}\n"
-            f"mkdir -p $(dirname {log_path})\n"
-            f"echo 'Edit this script to launch your server'\n"
-            f"# ./YOUR_SERVER_EXE {args_str} 2>&1 | tee -a {log_path}\n"
+            f"mkdir -p \"$(dirname {log_path})\"\n"
+            f"echo 'Edit {script_path} to launch your server'\n"
+            f"exit 1\n"
+            f"# exec ./YOUR_SERVER_EXE {args_str} >> {log_path} 2>&1\n"
         )
 
     try:
@@ -254,9 +269,8 @@ def _run_minecraft_deploy():
         _deploy_output += "\nGenerating start script..."
         _deploy_line_count = 6
 
-        log_file = LOG_FILE or os.path.join(SERVER_DIR, "logs/latest.log")
         script_path = LAUNCH_SCRIPT or os.path.join(SERVER_DIR, "start.sh")
-        generate_minecraft_start_script(SERVER_DIR, script_path, log_file)
+        generate_minecraft_start_script(SERVER_DIR, script_path)
 
         # Save the version as the build ID for update detection
         save_current_build_id(version_id)

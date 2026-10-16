@@ -21,7 +21,7 @@ Fills the gap between [Pterodactyl](https://pterodactyl.io/) (multi-server, mult
 - **Colour themes** - Pick from preset accent colours or use a custom colour picker. Background customisable too.
 - **Mobile responsive** - Automatically stacks to single-column on small screens
 - **Rate limiting** - Prevent accidental double-starts
-- **Simple auth** - Local username/password (first user = admin), or disable auth entirely
+- **Simple auth** - Local username/password (first user = admin, registration then closes unless enabled), or disable auth entirely
 - **Docker healthcheck** - Built-in health endpoint for container orchestration
 
 ## Quick Start
@@ -103,12 +103,14 @@ compatibility:
 | `log_file` | Where game server output is written - the panel's "Server Logs" reads this file |
 | `save_dir` | Directory to archive when you click Backup |
 | `steam_app_id` | Used by SteamCMD for deploy and update checks |
+| `port` / `port_protocol` | Game port and `udp`/`tcp` for the "Port open" check and the address shown in the panel. Optional; otherwise parsed from `args` (`-port=N`, `-port N`, `+server.port N`) |
+| `stop_timeout` | Seconds Stop/Restart wait for the server to save and exit before force killing it (default `60`) |
 
 ### How Logs Work
 
 Argonath has two log panels:
 
-- **Server Logs** - reads the file at `log_file` in your `game.yml`. The auto-generated `start.sh` pipes game server stdout/stderr to this file using `tee`. If you write your own start script, make sure it pipes output to this path.
+- **Server Logs** - reads the file at `log_file` in your `game.yml`. The auto-generated `start.sh` redirects game server stdout/stderr to this file. If you write your own start script, make sure it writes output to this path, and use `exec` for the server command so Stop can signal it directly. The start script's own output is kept in `/data/launcher.log` (useful when a launch fails).
 - **Startup Logs** - tracks lifecycle events (start, stop, crash, kill) in `/data/startup.log`. This is managed internally by Argonath and always works.
 
 ## Example Configs
@@ -153,7 +155,7 @@ volumes:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TZ` | `UTC` | Timezone |
-| `SECRET_KEY` | (generated) | Flask session secret |
+| `SECRET_KEY` | (generated) | Flask session secret. If unset, a random key is generated and saved to `/data/secret_key` |
 | `IDLE_SHUTDOWN_MINUTES` | `0` | Auto-stop after N minutes with 0 players (0 = disabled) |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |
 
@@ -213,7 +215,7 @@ All preferences are saved to your browser's localStorage and persist across sess
 
 ## Auth Modes
 
-- **`local`** (default) - Username/password accounts. First user to register becomes admin. Admins can start/stop/restart. Viewers can only see stats and logs.
+- **`local`** (default) - Username/password accounts. The first user to register becomes admin, and registration then closes. Set `auth.allow_registration: true` to let others sign up as viewers. Admins can start/stop/restart and download backups. Viewers can only see stats and logs.
 - **`none`** - No authentication. Use when behind a VPN or reverse proxy that handles auth.
 
 ## API Endpoints
@@ -234,6 +236,8 @@ All preferences are saved to your browser's localStorage and persist across sess
 | `/api/backup/status` | GET | Backup progress and list of archives |
 | `/api/backup/download/<file>` | GET | Download a specific backup |
 | `/api/check-update` | GET | Check for Steam updates |
+
+POST requests must include the header `X-Requested-With: argonath` (the panel adds it automatically). This blocks cross-site request forgery.
 
 ## Architecture
 

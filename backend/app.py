@@ -9,7 +9,6 @@ import threading
 import logging
 import tarfile
 import glob
-import subprocess
 from logging.handlers import RotatingFileHandler
 from datetime import datetime, timedelta
 
@@ -36,6 +35,9 @@ from config import (
     RATE_LIMIT_MAX_REQUESTS,
     SERVER_ARGS,
     PROCESS_NAME,
+    GAME_PORT,
+    GAME_PORT_PROTOCOL,
+    ALLOW_REGISTRATION,
     BACKUP_ENABLED,
     BACKUP_DIR,
     BACKUP_SOURCE,
@@ -62,6 +64,7 @@ from auth import get_current_user, require_auth, require_admin, login, logout, r
 from process_manager import (
     get_state, set_state, is_running, launch_server, kill_server, graceful_stop,
     get_uptime, get_server_usage, get_player_count, monitor_loop, write_startup_marker,
+    stop_process,
 )
 from stats import get_system_stats, get_health, get_history, collect_loop
 from updates import check_for_updates, run_update, get_update_info, check_updates_loop
@@ -72,6 +75,17 @@ from minecraft import is_minecraft
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = SECRET_KEY
 app.permanent_session_lifetime = timedelta(days=30)
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+
+@app.before_request
+def csrf_check():
+    """Reject cross-site API writes: the panel sends a custom header that a
+    cross-site form or simple request cannot set without a CORS preflight."""
+    if request.method in ("POST", "PUT", "PATCH", "DELETE") and request.path.startswith("/api/"):
+        if request.headers.get("X-Requested-With") != "argonath":
+            return jsonify({"error": "Missing X-Requested-With header"}), 403
 
 # Rate limiting
 _rate_limits = {}
@@ -117,20 +131,28 @@ def login_page():
         password = data.get("password", "")
 
         if not username or not password:
-            return render_template("login.html", error="Username and password required", game_name=GAME_NAME)
+            return render_template("login.html", error="Username and password required", game_name=GAME_NAME, registration_open=registration_open())
 
         user = login(username, password)
         if user:
             return redirect("/")
-        return render_template("login.html", error="Invalid credentials", game_name=GAME_NAME)
+        return render_template("login.html", error="Invalid credentials", game_name=GAME_NAME, registration_open=registration_open())
 
-    return render_template("login.html", error=None, game_name=GAME_NAME)
+    return render_template("login.html", error=None, game_name=GAME_NAME, registration_open=registration_open())
+
+
+def registration_open():
+    """The first account can always be created; after that only if enabled in config"""
+    return user_count() == 0 or ALLOW_REGISTRATION
 
 
 @app.route("/register", methods=["GET", "POST"])
 def register_page():
     if AUTH_MODE == "none":
         return redirect("/")
+
+    if not registration_open():
+        return redirect("/login")
 
     if request.method == "POST":
         data = request.form
@@ -204,35 +226,46 @@ def api_start():
     db_log_activity(user["id"] if user else None, "START server")
     write_startup_marker("User start: Server started by user")
 
-    # Check for updates before starting
-    if STEAMCMD_ENABLED and check_for_updates():
-        logger.info("Update available - running update before start")
-        run_update()
-        time.sleep(2)
-    elif is_minecraft(GAME_NAME) and check_for_updates():
-        logger.info("Minecraft update available - downloading new jar")
-        run_update()
-        time.sleep(2)
+    def start_sequence():
+        # Check for updates before starting (can take minutes, so not in the request)
+        try:
+            if (STEAMCMD_ENABLED or is_minecraft(GAME_NAME)) and check_for_updates():
+                logger.info("Update available - running update before start")
+                run_update()
+                time.sleep(2)
+        except Exception as e:
+            logger.error(f"Update before start failed: {e}")
 
-    try:
-        launch_server()
-    except Exception as e:
-        logger.error(f"Failed to start server: {e}")
-        set_state("offline", force=True)
-        return jsonify({"error": str(e)}), 500
+        if get_state() != "starting":
+            return  # stopped or killed while updating
 
-    def wait():
-        for i in range(START_TIMEOUT):
-            time.sleep(1)
-            if is_running():
-                set_state("running")
-                logger.info(f"Server started after {i + 1}s")
-                return
-        logger.error(f"Server failed to start within {START_TIMEOUT}s")
-        set_state("offline")
+        try:
+            launch_server()
+        except Exception as e:
+            logger.error(f"Failed to start server: {e}")
+            write_startup_marker(f"Start failed: {e}")
+            set_state("offline", force=True)
+            return
 
-    threading.Thread(target=wait, daemon=True).start()
+        _wait_for_start("started")
+
+    threading.Thread(target=start_sequence, daemon=True).start()
     return "", 204
+
+
+def _wait_for_start(verb):
+    """Wait for the game process to appear after a launch and update state"""
+    for i in range(START_TIMEOUT):
+        time.sleep(1)
+        if get_state() not in ("starting", "restarting"):
+            return  # user stopped or killed it meanwhile
+        if is_running():
+            set_state("running")
+            logger.info(f"Server {verb} after {i + 1}s")
+            return
+    logger.error(f"Server failed to start within {START_TIMEOUT}s")
+    write_startup_marker(f"Start failed: process not detected within {START_TIMEOUT}s")
+    set_state("offline")
 
 
 @app.route("/api/stop", methods=["POST"])
@@ -246,7 +279,10 @@ def api_stop():
         return jsonify({"error": "Insufficient permissions"}), 403
 
     current = get_state()
-    if current in ["offline", "stopping"]:
+    if current == "stopping":
+        return "", 204
+    if current in ["offline", "crashed"] and not is_running():
+        set_state("offline", force=True)
         return "", 204
 
     if not set_state("stopping"):
@@ -288,30 +324,30 @@ def api_restart():
     write_startup_marker("User restart: Server restarted by user")
 
     def restart_sequence():
-        # Kill
-        kill_server()
-        for i in range(20):
-            time.sleep(1)
-            if not is_running():
-                break
-
-        # Update
-        if STEAMCMD_ENABLED or is_minecraft(GAME_NAME):
-            run_update()
-
-        time.sleep(2)
-
-        # Launch
-        launch_server()
-        for i in range(START_TIMEOUT):
-            time.sleep(1)
-            if is_running():
-                set_state("running")
-                logger.info(f"Server restarted after {i + 1}s")
+        try:
+            # Stop cleanly so the game can save
+            if not stop_process():
+                logger.error("Server did not stop during restart")
+                set_state("crashed", force=True)
                 return
 
-        logger.error("Server failed to start after restart")
-        set_state("offline")
+            # Update
+            if STEAMCMD_ENABLED or is_minecraft(GAME_NAME):
+                run_update()
+
+            time.sleep(2)
+
+            # Launch
+            if get_state() != "restarting":
+                return  # killed meanwhile
+            launch_server()
+        except Exception as e:
+            logger.error(f"Restart failed: {e}")
+            write_startup_marker(f"Restart failed: {e}")
+            set_state("offline", force=True)
+            return
+
+        _wait_for_start("restarted")
 
     threading.Thread(target=restart_sequence, daemon=True).start()
     return "", 204
@@ -438,6 +474,10 @@ def api_backup_status():
 def api_backup_download(filename):
     if not BACKUP_ENABLED:
         return jsonify({"error": "Backup is not enabled"}), 400
+
+    user = get_current_user()
+    if user and user["role"] == "viewer":
+        return jsonify({"error": "Insufficient permissions"}), 403
 
     # Prevent path traversal
     if "/" in filename or "\\" in filename or ".." in filename:
@@ -581,34 +621,54 @@ def api_check_update():
     return jsonify(get_update_info())
 
 
+def get_game_port():
+    """Return (port, protocol) from game.yml, or (None, None) if unknown.
+    Uses game.port if set, otherwise parses common launch arg styles:
+    -port=N, -Port=N, -port N, +server.port N."""
+    port = GAME_PORT
+    if port is None:
+        for i, arg in enumerate(SERVER_ARGS):
+            lower = arg.lower()
+            value = None
+            if lower.startswith("-port="):
+                value = arg.split("=", 1)[1]
+            elif lower in ("-port", "+server.port", "--port") and i + 1 < len(SERVER_ARGS):
+                value = SERVER_ARGS[i + 1]
+            if value and value.isdigit():
+                port = int(value)
+                break
+
+    if port is None and is_minecraft(GAME_NAME):
+        port = 25565
+
+    if port is None:
+        return None, None
+
+    protocol = GAME_PORT_PROTOCOL or ("tcp" if is_minecraft(GAME_NAME) else "udp")
+    return port, protocol
+
+
 @app.route("/api/ping-game")
 @require_auth
 def api_ping_game():
-    """Check if the game server port is reachable (UDP or TCP)"""
+    """Check if something is listening on the game server port (UDP or TCP)"""
+    game_port, protocol = get_game_port()
+    if not game_port:
+        return jsonify({"reachable": False, "port": None, "error": "Game port unknown - set game.port in game.yml"})
+
     try:
-        import socket
-
-        # Extract game port from SERVER_ARGS
-        game_port = None
-        for arg in SERVER_ARGS:
-            if arg.lower().startswith('-port='):
-                game_port = int(arg.split('=')[1])
+        import psutil
+        listening = False
+        for conn in psutil.net_connections(kind=protocol):
+            if not conn.laddr or conn.laddr.port != game_port:
+                continue
+            if protocol == "udp" or conn.status == psutil.CONN_LISTEN:
+                listening = True
                 break
-        if not game_port:
-            game_port = 8211  # fallback
-
-        # Check if something is bound to the port using ss
-        result = subprocess.run(
-            ["ss", "-ulnp", f"sport = :{game_port}"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        listening = str(game_port) in result.stdout
-        return jsonify({"reachable": listening, "port": game_port})
+        return jsonify({"reachable": listening, "port": game_port, "protocol": protocol})
     except Exception as e:
         logger.error(f"Error checking game port: {e}")
-        return jsonify({"reachable": False, "port": 0, "error": str(e)})
+        return jsonify({"reachable": False, "port": game_port, "error": str(e)})
 
 
 @app.route("/api/server-ip")
@@ -623,13 +683,7 @@ def api_server_ip():
         logger.error(f"Error fetching public IP: {e}")
         ip = "unknown"
 
-    # Extract game port
-    game_port = None
-    for arg in SERVER_ARGS:
-        if arg.lower().startswith('-port='):
-            game_port = arg.split('=')[1]
-            break
-
+    game_port, _ = get_game_port()
     return jsonify({"ip": ip, "port": game_port or ""})
 
 
