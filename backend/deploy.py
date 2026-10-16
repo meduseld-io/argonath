@@ -22,8 +22,8 @@ from config import (
     SERVER_DIR,
     SERVER_ARGS,
     GAME_NAME,
-    WINE_ENABLED,
     LOG_FILE,
+    EXECUTABLE,
 )
 from minecraft import is_minecraft
 
@@ -45,7 +45,10 @@ def is_deployed():
 
     entries = os.listdir(SERVER_DIR)
     # Filter out files that exist before (or without) an actual install
-    ignored = {".gitkeep", ".gitignore", "start.sh", "server.log", "logs"}
+    ignored = {
+        ".gitkeep", ".gitignore", "start.sh", "server.log", "console.log", "logs",
+        ".steam", ".wine", "jre",
+    }
     if LOG_FILE:
         ignored.add(os.path.basename(LOG_FILE))
     if LAUNCH_SCRIPT:
@@ -88,21 +91,15 @@ def _run_deploy():
         # Ensure install directory exists
         os.makedirs(STEAMCMD_INSTALL_DIR, exist_ok=True)
 
-        # Build SteamCMD command
-        cmd = [
-            STEAMCMD_PATH,
-            "+force_install_dir", STEAMCMD_INSTALL_DIR,
-            "+login", "anonymous",
-            "+app_update", STEAM_APP_ID,
-        ]
-        if STEAMCMD_VALIDATE:
-            cmd.append("validate")
-        cmd.append("+quit")
+        if not STEAM_APP_ID:
+            raise ValueError("steam_app_id is not set in game.yml")
 
+        from updates import steamcmd_command, steamcmd_env
         logger.info(f"Deploy: Running SteamCMD for app {STEAM_APP_ID}")
 
         process = subprocess.Popen(
-            cmd,
+            steamcmd_command(),
+            env=steamcmd_env(),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -123,8 +120,9 @@ def _run_deploy():
 
         if process.returncode == 0:
             logger.info("Deploy: SteamCMD completed successfully")
-            # Generate start.sh if it doesn't exist
-            _generate_start_script()
+            # Older configs without `executable` still rely on a generated start.sh
+            if not EXECUTABLE:
+                _generate_start_script()
             # Save build ID so update detection works
             try:
                 from updates import get_latest_build_id, save_current_build_id
@@ -237,6 +235,7 @@ def _run_minecraft_deploy():
             download_server_jar,
             generate_minecraft_start_script,
             accept_eula,
+            ensure_java,
         )
         from updates import save_current_build_id
 
@@ -269,14 +268,22 @@ def _run_minecraft_deploy():
         _deploy_output += "\nGenerating start script..."
         _deploy_line_count = 6
 
-        script_path = LAUNCH_SCRIPT or os.path.join(SERVER_DIR, "start.sh")
-        generate_minecraft_start_script(SERVER_DIR, script_path)
+        _deploy_output += "\nDownloading Java runtime..."
+        _deploy_line_count = 7
+        if not ensure_java(SERVER_DIR, version_id):
+            _deploy_status = "failed"
+            _deploy_output += "\nFailed to download Java"
+            return
+
+        if not EXECUTABLE:
+            script_path = LAUNCH_SCRIPT or os.path.join(SERVER_DIR, "start.sh")
+            generate_minecraft_start_script(SERVER_DIR, script_path)
 
         # Save the version as the build ID for update detection
         save_current_build_id(version_id)
 
         _deploy_output += f"\nDeployed Minecraft {version_id} successfully"
-        _deploy_line_count = 7
+        _deploy_line_count = 8
         _deploy_status = "complete"
         logger.info("Minecraft deploy complete: version %s", version_id)
 

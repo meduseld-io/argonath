@@ -24,6 +24,7 @@ from config import (
     DATA_DIR,
     GAME_NAME,
     MAX_PLAYERS,
+    SERVER_DIR,
     STEAM_APP_ID,
     STEAMCMD_ENABLED,
     AUTH_MODE,
@@ -236,6 +237,8 @@ def api_start():
         except Exception as e:
             logger.error(f"Update before start failed: {e}")
 
+        _prepare_runtime()
+
         if get_state() != "starting":
             return  # stopped or killed while updating
 
@@ -251,6 +254,17 @@ def api_start():
 
     threading.Thread(target=start_sequence, daemon=True).start()
     return "", 204
+
+
+def _prepare_runtime():
+    """Install runtimes the game needs that aren't part of the image"""
+    if is_minecraft(GAME_NAME):
+        from minecraft import ensure_java
+        from updates import get_current_build_id
+        try:
+            ensure_java(SERVER_DIR, get_current_build_id())
+        except Exception as e:
+            logger.error(f"Could not install Java: {e}")
 
 
 def _wait_for_start(verb):
@@ -334,6 +348,7 @@ def api_restart():
             # Update
             if STEAMCMD_ENABLED or is_minecraft(GAME_NAME):
                 run_update()
+            _prepare_runtime()
 
             time.sleep(2)
 
@@ -507,7 +522,8 @@ def api_deploy():
         return jsonify({"error": "Cannot deploy while server is running"}), 400
 
     if not STEAMCMD_ENABLED and not is_minecraft(GAME_NAME):
-        return jsonify({"error": "SteamCMD is not enabled in config"}), 400
+        return jsonify({"error": f"{GAME_NAME} isn't installed through SteamCMD. "
+                                 "Copy the server files into the game folder (see the game's README)."}), 400
 
     success = start_deploy()
     if not success:
@@ -735,5 +751,6 @@ if __name__ == "__main__":
     # Start background threads
     start_background_threads()
 
-    # Run Flask
-    app.run(host=FLASK_HOST, port=FLASK_PORT, debug=False)
+    # Serve with waitress (a small production WSGI server) instead of Flask's dev server
+    from waitress import serve
+    serve(app, host=FLASK_HOST, port=FLASK_PORT, threads=8, ident="Argonath")

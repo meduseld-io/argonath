@@ -1,6 +1,7 @@
 """
 Argonath Configuration
-Loads settings from /config/game.yml and environment variables.
+Loads settings from a built-in game preset (GAME env var or `preset:` in
+game.yml), /config/game.yml and environment variables.
 """
 
 import os
@@ -27,15 +28,72 @@ if not os.path.isdir(GAME_DIR) and "ARGONATH_GAME_DIR" not in os.environ:
 
 CONFIG_FILE = os.path.join(CONFIG_DIR, "game.yml")
 
-# Load game.yml
-def load_config():
-    """Load and validate game.yml configuration"""
-    if not os.path.exists(CONFIG_FILE):
-        logger.warning(f"Config file not found at {CONFIG_FILE}, using defaults")
-        return {}
+# Built-in presets: /app/presets/<name>.yml in the image, examples/<name>/game.yml locally
+PRESETS_DIR = os.path.join(_app_dir, "presets")
+_EXAMPLES_DIR = os.path.join(_project_root, "examples")
 
-    with open(CONFIG_FILE, "r") as f:
+
+def list_presets():
+    """Names of the bundled game presets"""
+    if os.path.isdir(PRESETS_DIR):
+        return sorted(f[:-4] for f in os.listdir(PRESETS_DIR) if f.endswith(".yml"))
+    if os.path.isdir(_EXAMPLES_DIR):
+        return sorted(
+            d for d in os.listdir(_EXAMPLES_DIR)
+            if os.path.isfile(os.path.join(_EXAMPLES_DIR, d, "game.yml"))
+        )
+    return []
+
+
+def _preset_path(name):
+    name = os.path.basename(str(name).strip().lower())
+    for path in (
+        os.path.join(PRESETS_DIR, f"{name}.yml"),
+        os.path.join(_EXAMPLES_DIR, name, "game.yml"),
+    ):
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+def _read_yaml(path):
+    with open(path, "r") as f:
         return yaml.safe_load(f) or {}
+
+
+def _merge(base, override):
+    """Recursively merge override into base (lists and scalars are replaced)"""
+    result = dict(base)
+    for key, value in (override or {}).items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = _merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def load_config():
+    """Load the selected preset, then apply /config/game.yml on top of it"""
+    user = _read_yaml(CONFIG_FILE) if os.path.exists(CONFIG_FILE) else {}
+    preset_name = os.environ.get("GAME") or user.get("preset")
+
+    config = {}
+    if preset_name:
+        path = _preset_path(preset_name)
+        if path:
+            config = _read_yaml(path)
+            logger.info(f"Using built-in preset '{preset_name}'")
+        else:
+            logger.error(
+                f"Unknown game preset '{preset_name}'. Available: {', '.join(list_presets())}"
+            )
+    elif not user:
+        logger.warning(
+            f"No GAME set and no config at {CONFIG_FILE}. "
+            f"Set GAME to one of: {', '.join(list_presets())}"
+        )
+
+    return _merge(config, user)
 
 
 _config = load_config()
@@ -47,9 +105,23 @@ GAME_NAME = _game.get("name", "Game Server")
 STEAM_APP_ID = str(_game.get("steam_app_id", ""))
 PROCESS_NAME = _game.get("process_name", "")
 LAUNCH_SCRIPT = _game.get("launch_script", "")
-LAUNCH_EXE = _game.get("launch_exe", "")
 SERVER_DIR = _game.get("server_dir", GAME_DIR)
-LOG_FILE = _game.get("log_file", "")
+# Program to run, relative to server_dir (or absolute). Argonath launches it
+# directly with `args`, so no start script is needed. `launch_exe` is the old name.
+EXECUTABLE = _game.get("executable") or _game.get("launch_exe", "")
+# Directory to run the executable in, relative to server_dir
+WORKING_DIR = _game.get("working_dir", "")
+# Extra environment variables for the game process
+GAME_ENV = {str(k): str(v) for k, v in (_game.get("env") or {}).items()}
+# Run the game under a virtual X display (some Unity servers need one)
+USE_XVFB = bool(_game.get("xvfb", False))
+# Where the game's stdout/stderr go when Argonath launches it
+CONSOLE_LOG = _game.get("console_log", "")
+# The file shown in the panel's Server Logs
+LOG_FILE = _game.get("log_file", "") or CONSOLE_LOG or (
+    os.path.join(SERVER_DIR, "console.log") if EXECUTABLE else ""
+)
+CONSOLE_LOG = CONSOLE_LOG or LOG_FILE
 MAX_PLAYERS = _game.get("max_players", 8)
 QUERY_PORT = int(_game.get("query_port", 27015))
 SERVER_ARGS = [str(a) for a in (_game.get("args") or [])]
@@ -84,8 +156,13 @@ STEAMCMD_PATH = os.environ.get("STEAMCMD_PATH", "/opt/steamcmd/steamcmd.sh")
 # ================= COMPATIBILITY =================
 _compat = _config.get("compatibility", {})
 
-WINE_ENABLED = _compat.get("wine", False)
+WINE_ENABLED = bool(_compat.get("wine", False))
 PROTON_VERSION = _compat.get("proton_version", "")
+# Where GE-Proton builds are looked up when proton_version is set
+PROTON_DIR = os.environ.get("PROTON_DIR", "/compatibilitytools")
+
+# SteamCMD platform: "windows" for servers that only ship Windows builds
+STEAMCMD_PLATFORM = str(_steamcmd.get("platform", "windows" if WINE_ENABLED else "")).lower()
 
 # ================= TIMEOUTS & THRESHOLDS =================
 RATE_LIMIT_WINDOW = 60  # seconds

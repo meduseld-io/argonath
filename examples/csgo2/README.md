@@ -14,14 +14,16 @@ Native Linux dedicated server managed via SteamCMD.
 You need a **Game Server Login Token (GSLT)** from Valve:
 1. Go to https://steamcommunity.com/dev/managegameservers
 2. Create a new token for App ID `730`
-3. Replace `YOUR_GSLT_TOKEN` in `game.yml` args with your token
+3. Replace `YOUR_GSLT_TOKEN` in `args` with your token (in `config/game.yml`)
 
 ## Setup
 
-1. Copy `game.yml` to your Argonath `config/` folder
-2. Get a GSLT token (see above) and update the args
-3. Start the container - SteamCMD will download the server files via the Deploy button
-4. Start the server from the panel
+1. Set `GAME=csgo2` in your `docker-compose.yml` and run `docker compose up -d`
+2. Open the panel and click **Deploy** to download the server files via SteamCMD
+3. Get a GSLT token (see above) and update the args
+4. Click **Start**
+
+To change settings such as the server name, password or ports, create `config/game.yml` with `preset: csgo2` and only the fields you want to change (for example `game:` → `args:`). It is applied on top of the built-in preset; see [game.yml](game.yml) for everything the preset sets.
 
 ## Configuration
 

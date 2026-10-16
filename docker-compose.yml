@@ -1,16 +1,20 @@
 services:
   argonath:
     image: ghcr.io/meduseld-io/argonath:latest
-    container_name: argonath
+    # image: ghcr.io/meduseld-io/argonath:latest-wine  # for Windows-only servers (ARK, Enshrouded, V Rising...) and Core Keeper
     # build: .  # Uncomment for local development
-    ports:
-      - "5000:5000"
-    # pid: host  # Only to monitor a game server running outside the container (see README)
+    container_name: argonath
+    # Host networking: the game's ports are reachable without listing them,
+    # and Steam server discovery works. The panel is on http://<server>:5000
+    network_mode: host
     volumes:
       - ./game:/game
       - ./config:/config
       - argonath-data:/data
     environment:
+      - GAME=valheim          # built-in preset, see examples/ (valheim, palworld, minecraft, rust...)
+      - PUID=1000             # run as this user/group so ./game stays owned by you (see `id`)
+      - PGID=1000
       - TZ=America/New_York
       # - SECRET_KEY=change-me-to-something-random  # optional; generated and saved in /data if unset
       # - IDLE_SHUTDOWN_MINUTES=15

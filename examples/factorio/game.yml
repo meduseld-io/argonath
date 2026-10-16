@@ -1,23 +1,18 @@
-# Factorio Headless Server (no SteamCMD - uses official headless binary)
+# Factorio Headless Server (not on SteamCMD - download it once, see README)
 game:
   name: "Factorio"
-  steam_app_id: ""
-  process_name: "factorio"
-  launch_script: "/game/start.sh"
-  server_dir: "/game"
+  executable: "bin/x64/factorio"
+  process_name: "bin/x64/factorio"
+  args: ["--start-server-load-latest", "--server-settings", "/game/data/server-settings.json",
+         "--port", "34197"]
   log_file: "/game/factorio-current.log"
+  console_log: "/game/console.log"
   max_players: 16
-  args: []
-
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
+  port: 34197
+  port_protocol: "udp"
 
 steamcmd:
   enabled: false
 
-compatibility:
-  wine: false
+backup:
+  save_dir: "/game/saves"

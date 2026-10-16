@@ -1,26 +1,19 @@
-# Sons of the Forest / The Forest Dedicated Server (Wine/Proton required)
+# Sons of the Forest Dedicated Server (Windows-only, runs under Wine)
+# Needs the ghcr.io/meduseld-io/argonath:latest-wine image. Experimental.
 game:
   name: "Sons of the Forest"
   steam_app_id: "2465200"
+  executable: "SonsOfTheForestDS.exe"
   process_name: "SonsOfTheForestDS.exe"
-  launch_script: "/game/start.sh"
-  server_dir: "/game"
-  log_file: "/game/logs/sotf_server.log"
+  args: ["-userdatapath", "/game/userdata"]
+  log_file: "/game/console.log"
   max_players: 8
-  args: []
+  port: 8766
+  port_protocol: "udp"
+  query_port: 27016
 
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
-
-steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true
+backup:
+  save_dir: "/game/userdata"
 
 compatibility:
   wine: true
-  proton_version: "GE-Proton10-32"

@@ -1,25 +1,17 @@
 # Unturned Dedicated Server
+# The +SecureServer/<name> argument sets the server folder under Servers/.
 game:
   name: "Unturned"
   steam_app_id: "1110390"
-  process_name: "Unturned.x86_64"
-  launch_script: "/game/start.sh"
-  server_dir: "/game"
-  log_file: "/game/Servers/MyServer/Logs/Server.log"
+  executable: "ServerHelper.sh"
+  process_name: "Unturned_Headless.x86_64"
+  args: ["+SecureServer/MyServer"]
+  log_file: "/game/Logs/Server.log"
+  console_log: "/game/console.log"
   max_players: 24
-  args: ["-batchmode", "-nographics", "+secureserver/MyServer"]
+  port: 27015
+  port_protocol: "udp"
+  query_port: 27016
 
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
-
-steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true
-
-compatibility:
-  wine: false
+backup:
+  save_dir: "/game/Servers/MyServer"

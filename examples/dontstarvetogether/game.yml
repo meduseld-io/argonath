@@ -1,25 +1,18 @@
 # Don't Starve Together Dedicated Server
+# Cluster files go in /game/.klei/DoNotStarveTogether/Cluster_1 (see README).
 game:
   name: "Don't Starve Together"
   steam_app_id: "343050"
+  executable: "bin64/dontstarve_dedicated_server_nullrenderer_x64"
+  working_dir: "bin64"   # the server must run from its bin64 folder
   process_name: "dontstarve_dedicated_server_nullrenderer_x64"
-  launch_script: "/game/start.sh"
-  server_dir: "/game"
+  args: ["-persistent_storage_root", "/game/.klei", "-conf_dir", "DoNotStarveTogether",
+         "-cluster", "Cluster_1", "-shard", "Master", "-console"]
   log_file: "/game/.klei/DoNotStarveTogether/Cluster_1/Master/server_log.txt"
+  console_log: "/game/console.log"
   max_players: 6
-  args: []
+  port: 10999
+  port_protocol: "udp"
 
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
-
-steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true
-
-compatibility:
-  wine: false
+backup:
+  save_dir: "/game/.klei/DoNotStarveTogether/Cluster_1"

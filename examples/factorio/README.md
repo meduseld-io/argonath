@@ -17,14 +17,15 @@ Download the headless server binary:
 
 ## Setup
 
-1. Copy `game.yml` and `start.sh` to your Argonath `config/` folder
-2. Download and extract the Factorio headless binary into `/game/`
-3. Create a world save:
+1. Set `GAME=factorio` in your `docker-compose.yml` and run `docker compose up -d`
+2. Create a world save:
    ```
-   ./bin/x64/factorio --create /game/saves/world.zip
+   docker exec -it argonath /game/bin/x64/factorio --create /game/saves/world.zip
    ```
-4. Edit `data/server-settings.json` with your server name and settings
-5. Start the server from the panel
+3. Edit `data/server-settings.json` with your server name and settings
+4. Click **Start**
+
+To change settings such as the server name, password or ports, create `config/game.yml` with `preset: factorio` and only the fields you want to change (for example `game:` → `args:`). It is applied on top of the built-in preset; see [game.yml](game.yml) for everything the preset sets.
 
 ## Configuration
 

@@ -12,11 +12,13 @@ Native Linux dedicated server managed via SteamCMD.
 
 ## Setup
 
-1. Copy `game.yml` to your Argonath `config/` folder
-2. Start the container - SteamCMD will download the server files via the Deploy button
-3. Start the server from the panel
-4. On first connection, a player will be prompted to "claim" the server and set an admin password
-5. Server settings are then configured in-game via the Server Manager UI
+1. Set `GAME=satisfactory` in your `docker-compose.yml` and run `docker compose up -d`
+2. Open the panel and click **Deploy** to download the server files via SteamCMD
+3. On first connection, a player will be prompted to "claim" the server and set an admin password
+4. Server settings are then configured in-game via the Server Manager UI
+5. Click **Start**
+
+To change settings such as the server name, password or ports, create `config/game.yml` with `preset: satisfactory` and only the fields you want to change (for example `game:` → `args:`). It is applied on top of the built-in preset; see [game.yml](game.yml) for everything the preset sets.
 
 ## Configuration
 

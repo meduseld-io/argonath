@@ -5,12 +5,21 @@ using Mojang's version manifest API instead of SteamCMD.
 """
 
 import os
+import shutil
+import tarfile
+import tempfile
 import logging
 import requests
 
 logger = logging.getLogger(__name__)
 
 MANIFEST_URL = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"
+# Eclipse Temurin JRE builds (Linux x64), by Java major version
+JRE_URL = "https://api.adoptium.net/v3/binary/latest/{major}/ga/linux/x64/jre/hotspot/normal/eclipse"
+DEFAULT_JAVA_MAJOR = 21
+
+# Java major version required by each Minecraft version seen in the manifest
+_java_major = {}
 
 
 def is_minecraft(game_name):
@@ -49,6 +58,10 @@ def get_latest_release_info():
         version_resp = requests.get(version_entry["url"], timeout=10)
         version_resp.raise_for_status()
         version_data = version_resp.json()
+
+        major = version_data.get("javaVersion", {}).get("majorVersion")
+        if major:
+            _java_major[latest_id] = int(major)
 
         server_download = version_data.get("downloads", {}).get("server", {})
         jar_url = server_download.get("url")
@@ -136,3 +149,59 @@ def accept_eula(dest_dir):
         logger.info("Accepted Minecraft EULA at %s", eula_path)
     except OSError as e:
         logger.error("Failed to write eula.txt: %s", e)
+
+
+def ensure_java(dest_dir, version_id=None):
+    """Make sure <dest_dir>/jre has the Java version this Minecraft release needs.
+
+    Java isn't in the base image (it only matters for Minecraft), so a JRE is
+    downloaded next to the server on deploy and when a new release needs a
+    newer Java.
+
+    Returns:
+        bool: True if a suitable JRE is present
+    """
+    if version_id and version_id not in _java_major:
+        get_latest_release_info()
+    major = _java_major.get(version_id, DEFAULT_JAVA_MAJOR)
+
+    jre_dir = os.path.join(dest_dir, "jre")
+    marker = os.path.join(jre_dir, ".major")
+    try:
+        with open(marker) as f:
+            if int(f.read().strip()) >= major and os.path.exists(os.path.join(jre_dir, "bin", "java")):
+                return True
+    except (OSError, ValueError):
+        pass
+
+    url = JRE_URL.format(major=major)
+    logger.info("Downloading Java %s runtime from %s", major, url)
+    try:
+        with tempfile.TemporaryDirectory(dir=dest_dir) as tmp:
+            archive = os.path.join(tmp, "jre.tar.gz")
+            with requests.get(url, timeout=300, stream=True) as resp:
+                resp.raise_for_status()
+                with open(archive, "wb") as f:
+                    for chunk in resp.iter_content(chunk_size=1024 * 1024):
+                        f.write(chunk)
+
+            extract_dir = os.path.join(tmp, "x")
+            with tarfile.open(archive, "r:gz") as tar:
+                tar.extractall(extract_dir, filter="data")
+
+            # The archive holds a single top-level directory like jdk-21.0.5+11-jre
+            entries = os.listdir(extract_dir)
+            root = os.path.join(extract_dir, entries[0]) if len(entries) == 1 else extract_dir
+
+            if os.path.exists(jre_dir):
+                shutil.rmtree(jre_dir)
+            shutil.move(root, jre_dir)
+
+        with open(marker, "w") as f:
+            f.write(str(major))
+        logger.info("Installed Java %s runtime in %s", major, jre_dir)
+        return True
+
+    except (requests.RequestException, OSError, tarfile.TarError) as e:
+        logger.error("Failed to install Java runtime: %s", e)
+        return False

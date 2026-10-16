@@ -11,11 +11,14 @@ Native Linux dedicated server managed via SteamCMD.
 
 ## Setup
 
-1. Copy `game.yml` to your Argonath `config/` folder
-2. Start the container - SteamCMD will download the server files via the Deploy button
+1. Set `GAME=palworld` in your `docker-compose.yml` and run `docker compose up -d`
+2. Open the panel and click **Deploy** to download the server files via SteamCMD
 3. Start the server once to generate default config files
 4. Edit `Pal/Saved/Config/LinuxServer/PalWorldSettings.ini` with your settings
 5. Restart the server from the panel
+6. Click **Start**
+
+To change settings such as the server name, password or ports, create `config/game.yml` with `preset: palworld` and only the fields you want to change (for example `game:` → `args:`). It is applied on top of the built-in preset; see [game.yml](game.yml) for everything the preset sets.
 
 ## Configuration
 

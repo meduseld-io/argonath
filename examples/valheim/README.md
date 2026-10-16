@@ -11,14 +11,16 @@ Native Linux dedicated server managed via SteamCMD.
 
 ## Setup
 
-1. Copy `game.yml` and `start.sh` to your Argonath `config/` folder
-2. Start the container - SteamCMD will download the server files via the Deploy button
-3. Edit `game.yml` args (or `start.sh`) to set your server name, world name, and password
-4. Start the server from the panel
+1. Set `GAME=valheim` in your `docker-compose.yml` and run `docker compose up -d`
+2. Open the panel and click **Deploy** to download the server files via SteamCMD
+3. Set your server name, world name, and password in `args` (see Configuration below)
+4. Click **Start**
+
+To change settings such as the server name, password or ports, create `config/game.yml` with `preset: valheim` and only the fields you want to change (for example `game:` → `args:`). It is applied on top of the built-in preset; see [game.yml](game.yml) for everything the preset sets.
 
 ## Configuration
 
-Settings are passed as launch arguments in `start.sh`:
+Settings are passed as launch arguments in `args`:
 
 - `-name "MyServer"` - server name in the browser
 - `-port 2456` - game port

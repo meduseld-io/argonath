@@ -2,30 +2,15 @@
 game:
   name: "Palworld"
   steam_app_id: "2394010"
+  executable: "PalServer.sh"
   process_name: "PalServer-Linux-Shipping"
-  launch_script: "/game/start.sh"
-  server_dir: "/game"
+  args: ["-port=8211", "-queryport=27015", "-useperfthreads", "-NoAsyncLoadingThread",
+         "-UseMultithreadForDS"]
   log_file: "/game/server.log"
   max_players: 32
+  port: 8211
+  port_protocol: "udp"
   query_port: 27015
-  args: ["-port=8211", "-queryport=27015", "-useperfthreads", "-NoAsyncLoadingThread", "-UseMultithreadForDS"]
-
-server:
-  port: 5000
-  host: "0.0.0.0"
-
-auth:
-  mode: "local"
-
-steamcmd:
-  enabled: true
-  install_dir: "/game"
-  validate: true
 
 backup:
-  enabled: true
   save_dir: "/game/Pal/Saved"
-  max_keep: 5
-
-compatibility:
-  wine: false
