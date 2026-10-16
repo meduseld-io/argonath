@@ -35,7 +35,7 @@ def require_auth(f):
 
         user = get_current_user()
         if not user:
-            if request.is_json or request.headers.get("Accept") == "application/json":
+            if request.path.startswith("/api/") or request.is_json or request.accept_mimetypes.best == "application/json":
                 return jsonify({"error": "Authentication required"}), 401
             return redirect(url_for("login_page"))
         return f(*args, **kwargs)

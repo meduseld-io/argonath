@@ -11,6 +11,9 @@ game:
   log_file: ""                        # Path to the game's log file
   max_players: 8
   args: []                            # Additional launch arguments
+  # port: 2456                        # Game port (otherwise parsed from args)
+  # port_protocol: "udp"              # "udp" or "tcp"
+  # stop_timeout: 60                  # Seconds to wait for a clean shutdown before force kill
 
 server:
   port: 5000
@@ -18,6 +21,7 @@ server:
 
 auth:
   mode: "local"   # "local" (username/password), "none" (no auth, trusted network)
+  allow_registration: false   # Let new users sign up as viewers after the first admin
 
 steamcmd:
   enabled: true

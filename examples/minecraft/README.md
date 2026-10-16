@@ -57,5 +57,5 @@ The generated `start.sh` allocates 4GB max / 2GB min by default. Adjust `-Xmx` a
 - The EULA is auto-accepted during deploy
 - For modded servers (Forge/Fabric), replace `server.jar` manually and adjust `start.sh`
 - World data is in the `world/` directory
-- Logs are in `logs/latest.log`
-- The process name is `java` since Minecraft runs on the JVM
+- Logs are in `logs/latest.log` (written by Minecraft); raw console output goes to `logs/console.log`
+- The process name is `server.jar` rather than `java`, so other Java processes are never matched (or killed)

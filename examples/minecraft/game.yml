@@ -4,11 +4,13 @@
 game:
   name: "Minecraft"
   steam_app_id: ""
-  process_name: "java"
+  process_name: "server.jar"
   launch_script: "/game/start.sh"
   server_dir: "/game"
   log_file: "/game/logs/latest.log"
   max_players: 20
+  port: 25565
+  port_protocol: "tcp"
   args: []
 
 server:

@@ -5,18 +5,14 @@ services:
     # build: .  # Uncomment for local development
     ports:
       - "5000:5000"
-    pid: host
-    cap_add:
-      - SYS_PTRACE
-    security_opt:
-      - apparmor:unconfined
+    # pid: host  # Only to monitor a game server running outside the container (see README)
     volumes:
       - ./game:/game
       - ./config:/config
       - argonath-data:/data
     environment:
       - TZ=America/New_York
-      # - SECRET_KEY=change-me-to-something-random
+      # - SECRET_KEY=change-me-to-something-random  # optional; generated and saved in /data if unset
       # - IDLE_SHUTDOWN_MINUTES=15
     restart: unless-stopped
 

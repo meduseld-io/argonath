@@ -100,16 +100,21 @@ def download_server_jar(jar_url, dest_dir):
         return False
 
 
-def generate_minecraft_start_script(dest_dir, launch_script_path, log_file):
-    """Generate a start.sh for Minecraft if one doesn't exist."""
+def generate_minecraft_start_script(dest_dir, launch_script_path):
+    """Generate a start.sh for Minecraft if one doesn't exist.
+
+    Minecraft writes logs/latest.log itself, so console output goes to a
+    separate file instead of being appended to latest.log a second time.
+    """
     if os.path.exists(launch_script_path):
         return
 
     content = (
         "#!/bin/bash\n"
+        "# Adjust -Xmx and -Xms for your available RAM.\n"
         f"cd {dest_dir}\n"
-        f"mkdir -p $(dirname {log_file})\n"
-        f"exec java -Xmx4G -Xms2G -jar server.jar nogui 2>&1 | tee -a {log_file}\n"
+        "mkdir -p logs\n"
+        "exec java -Xmx4G -Xms2G -jar server.jar nogui >> logs/console.log 2>&1\n"
     )
 
     try:
